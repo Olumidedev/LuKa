@@ -1,0 +1,96 @@
+@import "tailwindcss";
+
+/* Luka design tokens (BRD §3.2). Light = Cassava Linen daylight kitchen; dark = Cast Iron. */
+:root {
+  --bg: #faf8f5;          /* Cassava Linen */
+  --surface: #ffffff;
+  --sunk: #f3efe8;
+  --fg: #1c1917;          /* Cast Iron */
+  --muted: #6b635a;
+  --line: #e7e1d8;
+  --saffron: #d97706;     /* Palm Saffron */
+  --saffron-ink: #b45309;
+  --saffron-soft: #fdf1e1;
+  --leaf: #065f46;        /* Ugu Leaf */
+  --leaf-soft: #e4f0ea;
+  --danger: #b42318;
+  --danger-soft: #fdecea;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1c1917;
+    --surface: #26221f;
+    --sunk: #2f2a26;
+    --fg: #f5f0e8;
+    --muted: #a8a29e;
+    --line: #3b3531;
+    --saffron: #f59e0b;
+    --saffron-ink: #fbbf24;
+    --saffron-soft: #3a2a12;
+    --leaf: #34d399;
+    --leaf-soft: #133a2f;
+    --danger: #f87171;
+    --danger-soft: #3b1d1b;
+    color-scheme: dark;
+  }
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-sunk: var(--sunk);
+  --color-fg: var(--fg);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-saffron: var(--saffron);
+  --color-saffron-ink: var(--saffron-ink);
+  --color-saffron-soft: var(--saffron-soft);
+  --color-leaf: var(--leaf);
+  --color-leaf-soft: var(--leaf-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --font-display: "Fraunces", Georgia, "Times New Roman", serif;
+  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+html,
+body {
+  background: var(--bg);
+  color: var(--fg);
+}
+body {
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+h1,
+h2,
+h3 {
+  text-wrap: balance;
+}
+.tnum {
+  font-variant-numeric: tabular-nums;
+}
+:focus-visible {
+  outline: 2px solid var(--saffron);
+  outline-offset: 2px;
+}
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+@keyframes sheet-up {
+  from {
+    transform: translateY(24px);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+.sheet-in {
+  animation: sheet-up 180ms ease-out;
+}

@@ -1,0 +1,47 @@
+rules_version = '2';
+
+// Luka zero-trust baseline (BRD v3.2 §5 Day-1). Deploy with Firebase App Check enforced.
+// Deny by default; every path below is opened only to a verified identity.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function signedIn() { return request.auth != null; }
+    function isUser(uid) { return signedIn() && request.auth.uid == uid; }
+    function isMember(appId, hid) {
+      return signedIn()
+        && request.auth.uid in get(/databases/$(database)/documents/artifacts/$(appId)/households/$(hid)/metadata/main).data.memberUids;
+    }
+
+    match /artifacts/{appId} {
+      // Profile and private vault: the owner only. Life-stage and location data never leave this subtree.
+      match /users/{userId}/{doc=**} {
+        allow read, write: if isUser(userId);
+      }
+
+      match /households/{hid} {
+        match /metadata/main {
+          allow read: if isMember(appId, hid);
+          // Creating a household: the creator must list themselves as the only member.
+          allow create: if signedIn() && request.resource.data.memberUids == [request.auth.uid];
+          // Only existing members may change the household, and they can't remove themselves by accident.
+          allow update: if isMember(appId, hid) && request.auth.uid in request.resource.data.memberUids;
+          allow delete: if false;
+        }
+        // Plans, recipes, lists, sources and the price book: tenant-isolated by membership (prevents IDOR).
+        match /{collection}/{docId} {
+          allow read, write: if isMember(appId, hid)
+            && collection in ['meal_plans', 'custom_sources', 'recipes', 'grocery_lists', 'price_book'];
+        }
+      }
+
+      // Community recipes: readable by signed-in users; written only by backend service accounts.
+      match /public_recipes/{recipeId} {
+        allow read: if signedIn();
+        allow write: if false;
+      }
+    }
+  }
+}
