@@ -21,7 +21,7 @@ This records what the MVP on this branch builds, what it deliberately defers, an
 5. **Push-to-Look instead of streaming video.** Vision is limited to a single fridge photo. It's re-encoded on the device (EXIF/GPS stripped), checked by magic bytes, processed in memory and never stored.
 6. **Cold start.** Every ingredient has a Toronto baseline price and pack size, so the list prices itself on day 1.
 7. **Cook vs. order, reframed as fridge rescue.** The recipe sheet compares home cost with a transparent takeout estimate (per-person spend + a flat, stated 28%). It also points out when the dish uses fresh food already bought this week.
-8. **Day-1 security baseline, not enterprise plumbing.** Shipped: strict security headers, deny-by-default `firestore.rules` with membership-based tenant isolation, a server-only AI gateway, per-IP rate limits on AI endpoints, untrusted-text delimiters against prompt injection, only constraints (not names or health data) sent to the model, and handoff links that keep the recipe in the URL fragment so it never reaches a server. Deferred to post-PMF: CMEK envelope encryption, multi-region active-active, enterprise WAF, ClamAV pipeline.
+8. **Day-1 security baseline, not enterprise plumbing.** Shipped: strict security headers, deny-by-default Postgres row-level security with membership-based tenant isolation (`supabase/migrations`, tested in `supabase/tests`), a server-only AI gateway, per-IP rate limits on AI endpoints, untrusted-text delimiters against prompt injection, only constraints (not names or health data) sent to the model, and handoff links that keep the recipe in the URL fragment so it never reaches a server. Deferred to post-PMF: CMEK envelope encryption, multi-region active-active, enterprise WAF, ClamAV pipeline.
 9. **No social-video scraping.** Users paste text or type recipes (with credit and link). URL fetching, oEmbed and schema.org JSON-LD ingestion come later, behind an egress-filtered fetcher.
 
 ## Built vs. deferred
@@ -30,7 +30,7 @@ This records what the MVP on this branch builds, what it deliberately defers, an
 
 **Wired but needs keys:** AI recipe generation by country, paste-anything recipe structuring, fridge photo scan (`GEMINI_API_KEY`).
 
-**Next:** Firebase Auth + App Check + Firestore sync (adapter seam in `src/lib/state/store.tsx`), receipt OCR price book, offline service worker, groups tier, and Stripe/app-store billing.
+**Added since:** Supabase accounts (email/password, email link, optional Google), cloud sync and household invites, chosen over Firebase because it is open source and self-hostable. **Next:** admin area and analytics, receipt OCR price book, offline service worker, groups tier, and Stripe/app-store billing.
 
 ## Corrections to v3.1 numbers
 

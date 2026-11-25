@@ -6,9 +6,9 @@ import type { AppState } from "../types";
 import { defaultState } from "./defaults";
 
 /**
- * Local-first persistence. The household lives in this device's storage until
- * Firebase is configured; `PersistenceAdapter` is the seam where the Firestore
- * adapter (households/{id}, rules in firestore.rules) plugs in.
+ * Local-first persistence: the household always lives in this device's storage.
+ * When someone signs in, `CloudSync` (src/lib/cloud/sync.tsx) mirrors it to
+ * their Supabase household.
  */
 export interface PersistenceAdapter {
   load(): AppState | null;
