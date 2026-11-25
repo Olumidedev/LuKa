@@ -5,6 +5,7 @@ import type { CookCard } from "@/lib/engine/cookcard";
 import { regenerate } from "@/lib/state/actions";
 import { useStore } from "@/lib/state/store";
 import type { CuisinePick } from "@/lib/types";
+import { AccountMenu } from "./AccountMenu";
 import { CookMode } from "./CookMode";
 import { CuisinePicker } from "./CuisinePicker";
 import { GroceryTab } from "./GroceryTab";
@@ -64,6 +65,7 @@ export function AppShell() {
             <button type="button" onClick={() => ui.setTab("plan")} className="font-display text-2xl font-bold text-saffron">
               Luka
             </button>
+            <div className="flex items-center gap-3">
             <nav className="hidden gap-1 sm:flex" aria-label="Sections">
               {TABS.map((t) => (
                 <button
@@ -77,6 +79,8 @@ export function AppShell() {
                 </button>
               ))}
             </nav>
+            <AccountMenu />
+            </div>
           </div>
         </header>
 

@@ -26,6 +26,10 @@ Copy `.env.example` to `.env.local` and set `GEMINI_API_KEY` to turn on:
 
 Only household *constraints* (allergens, food rules) are sent to the model, never names or health details. Everything the model returns is re-checked by the same deterministic allergen gate as the built-in library.
 
+### Accounts and sync
+
+Set `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` to turn on sign-in (email and password, email links, optional Google), cloud sync and household invites. Setup steps, including the database migration, are in `docs/SUPABASE.md`.
+
 ## How it's built
 
 | Area | Where |
@@ -38,6 +42,7 @@ Only household *constraints* (allergens, food rules) are sent to the model, neve
 | Pack-aware shopping list and fresh-food utilization | `src/lib/engine/shopping.ts` |
 | AI gateway, prompts and untrusted-output normalizer | `src/lib/ai/` and `src/app/api/ai/` |
 | UI (Next.js App Router, Tailwind v4) | `src/components/`, `src/app/` |
-| Firestore security rules for the synced version | `firestore.rules` |
+| Database schema and row-level security (Supabase / Postgres) | `supabase/migrations/`, tested by `supabase/tests/` |
+| Sign-in, sync and invites | `src/lib/cloud/`, `src/app/login`, `src/app/join` |
 
 `docs/BRD-v3.2-review.md` explains the product decisions behind this MVP and what's deferred.

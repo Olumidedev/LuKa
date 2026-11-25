@@ -1,6 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
+import { useAuth } from "@/lib/cloud/auth";
 import { newMember } from "@/lib/state/defaults";
 import { regenerate } from "@/lib/state/actions";
 import { useStore } from "@/lib/state/store";
@@ -20,6 +22,7 @@ const STEPS = ["Who's eating", "Your cuisines", "Your plan"];
 /** Stage 1 onboarding (BRD §3.3): three inputs, then an immediate plan. */
 export function Onboarding() {
   const { state, update } = useStore();
+  const auth = useAuth();
   const [step, setStep] = useState(0);
   const [members, setMembers] = useState(state.members.length ? state.members : [newMember()]);
   const [cuisines, setCuisines] = useState(state.cuisines);
@@ -39,7 +42,14 @@ export function Onboarding() {
   return (
     <div className="mx-auto flex min-h-dvh max-w-2xl flex-col px-[max(16px,env(safe-area-inset-left))] py-8 sm:py-14">
       <header className="mb-8">
-        <p className="font-display text-3xl font-bold text-saffron">Luka</p>
+        <div className="flex items-center justify-between gap-3">
+          <p className="font-display text-3xl font-bold text-saffron">Luka</p>
+          {auth.configured && !auth.user && (
+            <Link href="/login" className="text-sm font-semibold text-muted hover:text-fg">
+              Already use Luka? Sign in
+            </Link>
+          )}
+        </div>
         <h1 className="mt-3 font-display text-[28px] font-semibold leading-tight sm:text-4xl">
           {step === 0 && "Who are you cooking for?"}
           {step === 1 && "Which kitchens do you cook from?"}

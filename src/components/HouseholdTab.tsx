@@ -1,6 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
+import { useAuth } from "@/lib/cloud/auth";
+import { useCloud } from "@/lib/cloud/sync";
 import { pickLabel } from "@/lib/data/countries";
 import { regenerate } from "@/lib/state/actions";
 import { defaultState, newMember } from "@/lib/state/defaults";
@@ -17,6 +20,8 @@ export function HouseholdTab() {
   const ui = useUI();
   const toast = useToast();
   const [confirmReset, setConfirmReset] = useState(false);
+  const auth = useAuth();
+  const cloud = useCloud();
 
   const setMember = (id: string, m: Member) => {
     const prev = state.members.find((x) => x.id === id);
@@ -146,10 +151,26 @@ export function HouseholdTab() {
       </section>
 
       <section className="grid gap-2 border-t border-line pt-6">
-        <p className="text-sm text-muted">Your household is saved on this device. Account sync and shared household access arrive with sign-in.</p>
+        <p className="text-sm text-muted">
+          {auth.user ? (
+            <>
+              Signed in as {auth.user.email}. {cloud.household ? `${cloud.household.name} syncs to your account` : "Your household will sync once setup finishes"}, and everyone you invite shares the same plan and list.
+            </>
+          ) : auth.configured ? (
+            <>
+              Your household is saved on this device only.{" "}
+              <Link href="/login" className="font-semibold text-fg underline">
+                Sign in
+              </Link>{" "}
+              to keep it on every device and share it with the people you live with.
+            </>
+          ) : (
+            "Your household is saved on this device."
+          )}
+        </p>
         {confirmReset ? (
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-sm">Delete your household, plan and recipes from this device?</span>
+            <span className="text-sm">Delete your household, plan and recipes from this device{auth.user ? " (your account copy stays)" : ""}?</span>
             <Button
               variant="danger"
               onClick={() => {
