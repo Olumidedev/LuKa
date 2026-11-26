@@ -45,7 +45,7 @@ export function ColumnChart({ title, data, unit }: { title: string; data: { labe
       <figcaption className="flex items-baseline justify-between gap-3">
         <span className="font-semibold">{title}</span>
         <span className="text-[13px] text-muted tnum">
-          {fmt(total)} {unit} total
+          {fmt(total)} {total === 1 ? unit.replace(/s$/, "") : unit} total
         </span>
       </figcaption>
       <div ref={box} className="relative mt-3" onPointerLeave={() => setHover(null)}>
@@ -89,7 +89,7 @@ export function ColumnChart({ title, data, unit }: { title: string; data: { labe
             style={{ left: Math.min(w - 110, Math.max(0, pad.l + hover * slot + slot / 2 - 50)), top: Math.max(0, y(data[hover].value) - 48) }}
           >
             <div className="text-[14px] font-semibold tnum">
-              {fmt(data[hover].value)} {unit}
+              {fmt(data[hover].value)} {data[hover].value === 1 ? unit.replace(/s$/, "") : unit}
             </div>
             <div className="text-muted">{data[hover].label}</div>
           </div>
