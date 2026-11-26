@@ -1,7 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { aiGenerateRecipes, useAIEnabled } from "@/lib/ai/client";
 import { useAuth } from "@/lib/cloud/auth";
+import { useCatalog } from "@/lib/cloud/catalog";
+import { getSupabase } from "@/lib/cloud/supabase";
+import { ALL_COUNTRIES } from "@/lib/data/countries";
 import {
   loadConfigRows,
   loadOverview,
@@ -17,7 +21,7 @@ import { mergeConfig, type AppConfig } from "@/lib/cloud/config";
 import { Button, Label, Segmented, Tag, cx, inputCls, useToast } from "../ui";
 import { BarList, ColumnChart, Stat } from "./charts";
 
-type Section = "overview" | "users" | "issues" | "settings";
+type Section = "overview" | "users" | "recipes" | "issues" | "settings";
 
 const EVENT_LABEL: Record<string, string> = {
   app_opened: "Opened the app",
@@ -55,6 +59,7 @@ export default function AdminPanel() {
           options={[
             { value: "overview", label: "Overview" },
             { value: "users", label: "Users" },
+            { value: "recipes", label: "Recipes" },
             { value: "issues", label: "Errors & feedback" },
             { value: "settings", label: "Settings" },
           ]}
@@ -62,6 +67,7 @@ export default function AdminPanel() {
       </div>
       {section === "overview" && <OverviewSection />}
       {section === "users" && <UsersSection me={user?.id ?? ""} />}
+      {section === "recipes" && <RecipesSection />}
       {section === "issues" && <IssuesSection />}
       {section === "settings" && <SettingsSection />}
     </div>
@@ -151,7 +157,7 @@ function OverviewBody({ o }: { o: Overview }) {
           note="Devices that reached each step at least once"
           unit="devices"
           rows={[
-            { label: "Opened Luka", value: f.opened },
+            { label: "Opened LUKA", value: f.opened },
             { label: "Finished setup", value: f.onboarded, hint: pct(f.onboarded) },
             { label: "Built a plan", value: f.planned, hint: pct(f.planned) },
             { label: "Used the list", value: f.shopped, hint: pct(f.shopped) },
@@ -371,7 +377,7 @@ function SettingsSection() {
     setSaving(true);
     try {
       await saveConfig(c);
-      toast({ text: "Saved. People see the change the next time they open Luka." });
+      toast({ text: "Saved. People see the change the next time they open LUKA." });
     } catch (e) {
       toast({ text: e instanceof Error ? e.message : "Couldn't save." });
     } finally {
@@ -454,7 +460,7 @@ function SettingsSection() {
 
       <section className="grid gap-2 rounded-2xl bg-sunk p-4 text-sm">
         <h2 className="font-semibold">Fixing bugs and adding features</h2>
-        <p className="text-muted">Code changes go through GitHub pull requests; merging one redeploys Luka automatically once Vercel is connected to the repo.</p>
+        <p className="text-muted">Code changes go through GitHub pull requests; merging one redeploys LUKA automatically once Vercel is connected to the repo.</p>
         <ul className="grid gap-1">
           <li>
             <a className="font-semibold underline" href="https://github.com/Olumidedev/LuKa/pulls" target="_blank" rel="noopener noreferrer">
@@ -473,6 +479,150 @@ function SettingsSection() {
           </li>
         </ul>
       </section>
+    </div>
+  );
+}
+
+/* ── Recipes (shared catalog) ────────────────────────── */
+interface CatalogRow {
+  id: string;
+  name: string;
+  countries: string[];
+  meals: string[];
+  status: "live" | "hidden";
+  source: string;
+  created_at: string;
+}
+
+async function loadCatalogRows(): Promise<CatalogRow[]> {
+  const { data, error } = await getSupabase()!
+    .from("recipes")
+    .select("id, name, countries, meals, status, source, created_at")
+    .order("created_at", { ascending: false })
+    .limit(1000);
+  if (error) throw new Error(error.message);
+  return data as CatalogRow[];
+}
+
+function RecipesSection() {
+  const toast = useToast();
+  const ai = useAIEnabled();
+  const catalog = useCatalog();
+  const { data, err, reload } = useLoad<CatalogRow[]>(loadCatalogRows, []);
+  const [q, setQ] = useState("");
+  const [country, setCountry] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [confirm, setConfirm] = useState<string | null>(null);
+  const rows = (data ?? []).filter((r) => !q || `${r.name} ${r.countries.join(" ")}`.toLowerCase().includes(q.toLowerCase()));
+  const byCountry = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const r of data ?? []) if (r.status === "live") for (const c of r.countries) m.set(c, (m.get(c) ?? 0) + 1);
+    return [...m].sort((a, b) => b[1] - a[1]);
+  }, [data]);
+
+  const after = async (msg: string) => {
+    toast({ text: msg });
+    reload();
+    await catalog.refresh();
+  };
+
+  const setStatus = async (r: CatalogRow, status: "live" | "hidden") => {
+    const { error } = await getSupabase()!.from("recipes").update({ status }).eq("id", r.id);
+    if (error) return toast({ text: error.message });
+    await after(status === "hidden" ? `${r.name} is hidden from everyone.` : `${r.name} is live again.`);
+  };
+
+  const remove = async (r: CatalogRow) => {
+    const { error } = await getSupabase()!.from("recipes").delete().eq("id", r.id);
+    setConfirm(null);
+    if (error) return toast({ text: error.message });
+    await after(`Deleted ${r.name}.`);
+  };
+
+  const generate = async () => {
+    if (!ALL_COUNTRIES.includes(country)) return toast({ text: "Choose a country from the list." });
+    setBusy(true);
+    try {
+      const res = await aiGenerateRecipes(country, ["b", "l", "d"], 6);
+      await after(`Claude wrote ${res.recipes.length} new ${country} recipes.`);
+    } catch (e) {
+      toast({ text: e instanceof Error ? e.message : "That didn't work." });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="grid gap-6">
+      <div>
+        <h1 className="font-display text-3xl font-semibold">Recipes</h1>
+        <p className="text-sm text-muted">
+          The shared catalog Claude writes into. Hidden recipes disappear from everyone&apos;s plans the next time they open LUKA. The 60 built-in recipes aren&apos;t listed here.
+        </p>
+      </div>
+
+      <section className="grid gap-3 rounded-3xl border border-line bg-surface p-5">
+        <h2 className="text-lg font-semibold">Write new recipes</h2>
+        {!ai && <p className="text-sm text-muted">Add ANTHROPIC_API_KEY in Vercel to switch this on.</p>}
+        <div className="flex flex-wrap items-end gap-2">
+          <div className="min-w-0 flex-1 basis-56">
+            <Label htmlFor="admin-gen-country">Country</Label>
+            <input id="admin-gen-country" list="admin-countries" className={inputCls} value={country} onChange={(e) => setCountry(e.target.value)} placeholder="e.g. Burkina Faso" />
+            <datalist id="admin-countries">
+              {ALL_COUNTRIES.map((c) => (
+                <option key={c} value={c} />
+              ))}
+            </datalist>
+          </div>
+          <Button variant="primary" onClick={generate} disabled={!ai || busy}>
+            {busy ? "Claude is writing…" : "Write 6 recipes"}
+          </Button>
+        </div>
+        {byCountry.length > 0 && (
+          <p className="text-[13px] text-muted">
+            Live by country: {byCountry.slice(0, 12).map(([c, n]) => `${c} ${n}`).join(" · ")}
+          </p>
+        )}
+      </section>
+
+      <ErrorNote err={err} />
+      <input id="admin-recipe-search" className={cx(inputCls, "max-w-xs")} placeholder="Search recipes or countries" value={q} onChange={(e) => setQ(e.target.value)} />
+      <ul className="divide-y divide-line rounded-3xl border border-line bg-surface">
+        {rows.map((r) => (
+          <li key={r.id} className="flex flex-wrap items-center gap-3 px-4 py-3">
+            <div className="min-w-0 flex-1">
+              <p className="flex flex-wrap items-center gap-2">
+                <span className={cx("font-semibold", r.status === "hidden" && "text-muted line-through")}>{r.name}</span>
+                {r.status === "hidden" && <Tag tone="danger">Hidden</Tag>}
+                {r.source === "admin" && <Tag>Admin</Tag>}
+              </p>
+              <p className="text-[13px] text-muted">
+                {r.countries.join(" × ")} · {r.meals.map((m) => ({ b: "Breakfast", l: "Lunch", d: "Dinner" })[m] ?? m).join(", ")} · added {shortDate(r.created_at)}
+              </p>
+            </div>
+            {confirm === r.id ? (
+              <span className="flex gap-2">
+                <Button size="sm" variant="danger" onClick={() => remove(r)}>
+                  Delete for good
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => setConfirm(null)}>
+                  Cancel
+                </Button>
+              </span>
+            ) : (
+              <span className="flex gap-2">
+                <Button size="sm" onClick={() => setStatus(r, r.status === "live" ? "hidden" : "live")}>
+                  {r.status === "live" ? "Hide" : "Show"}
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => setConfirm(r.id)}>
+                  Delete
+                </Button>
+              </span>
+            )}
+          </li>
+        ))}
+        {data && !rows.length && <li className="px-4 py-6 text-sm text-muted">{data.length ? "No recipes match." : "No AI recipes yet. Write some above, or pick a country in the app and LUKA will write them automatically."}</li>}
+      </ul>
     </div>
   );
 }

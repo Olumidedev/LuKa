@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { Ingredient, Member, PantryItem, Recipe } from "../types";
-import { forbiddenKindsForRules } from "../engine/gate";
+import type { Ingredient, PantryItem, Recipe } from "../types";
+import { getSupabase } from "../cloud/supabase";
 
 let status: Promise<boolean> | null = null;
 function aiStatus() {
@@ -26,8 +26,13 @@ export function useAIEnabled() {
   return on;
 }
 
+async function authHeader(): Promise<Record<string, string>> {
+  const { data } = (await getSupabase()?.auth.getSession()) ?? { data: { session: null } };
+  return data.session ? { authorization: `Bearer ${data.session.access_token}` } : {};
+}
+
 async function call<T>(url: string, init: RequestInit): Promise<T> {
-  const res = await fetch(url, init);
+  const res = await fetch(url, { ...init, headers: { ...(init.headers as Record<string, string>), ...(await authHeader()) } });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error((data as { error?: string }).error ?? "The AI request failed.");
   return data as T;
@@ -38,14 +43,18 @@ export interface AIRecipes {
   ingredients: Record<string, Ingredient>;
 }
 
-/** Only constraints leave the device: no names, ages or life-stage details. */
-export function aiGenerateRecipes(country: string, members: Member[]) {
-  const avoidAllergens = [...new Set(members.flatMap((m) => m.allergies))];
-  const avoidKinds = [...forbiddenKindsForRules(members).kinds];
+/** Asks Claude for new recipes from one country; they join the shared catalog. */
+export function aiGenerateRecipes(country: string, meals: ("b" | "l" | "d")[] = ["b", "l", "d"], count = 6) {
+  let deviceId: string | undefined;
+  try {
+    deviceId = localStorage.getItem("luka:device") ?? undefined;
+  } catch {
+    /* ignore */
+  }
   return call<AIRecipes>("/api/ai/recipes", {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ country, meals: ["b", "l", "d"], avoidAllergens, avoidKinds }),
+    body: JSON.stringify({ country, meals, count, deviceId }),
   });
 }
 

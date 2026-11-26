@@ -137,7 +137,7 @@ export function PlanTab() {
 
       {uncovered.length > 0 && (
         <p className="rounded-2xl bg-saffron-soft px-4 py-3 text-sm text-saffron-ink">
-          No {uncovered.join(", ")} recipes in your library yet, so Luka is using dishes from the same region.{" "}
+          No {uncovered.join(", ")} recipes yet, so LUKA is using dishes from the same region.{" "}
           <button type="button" className="font-semibold underline" onClick={() => ui.setTab("recipes")}>
             Add your own or generate some
           </button>

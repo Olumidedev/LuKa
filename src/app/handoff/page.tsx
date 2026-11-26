@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Logo } from "@/components/brand";
 import { CookMode } from "@/components/CookMode";
 import { Button } from "@/components/ui";
 import { stepText } from "@/lib/engine/cookcard";
@@ -22,7 +23,7 @@ export default function HandoffPage() {
   if (!h)
     return (
       <main className="mx-auto max-w-xl px-5 py-16">
-        <p className="font-display text-3xl font-bold text-saffron">Luka</p>
+        <Logo size={34} wordClass="text-2xl" />
         <h1 className="mt-4 font-display text-2xl font-semibold">This handoff link is incomplete</h1>
         <p className="mt-2 text-muted">Ask whoever sent it to share it again. Copy the whole link, including everything after the “#”.</p>
       </main>
@@ -31,7 +32,7 @@ export default function HandoffPage() {
   const { card } = h;
   return (
     <main className="mx-auto max-w-2xl px-[max(20px,env(safe-area-inset-left))] py-10">
-      <p className="font-display text-2xl font-bold text-saffron">Luka</p>
+      <Logo size={30} wordClass="text-xl" />
       <p className="mt-6 text-[12px] font-semibold uppercase tracking-[0.1em] text-muted">
         {h.from ? `From ${h.from}` : "Dinner handoff"}
         {h.when ? ` · ${h.when}` : ""}

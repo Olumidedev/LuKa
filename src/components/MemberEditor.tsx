@@ -116,7 +116,7 @@ export function MemberEditor({
             </div>
           </div>
           <div>
-            <Label>Diet — Luka swaps their portion</Label>
+            <Label>Diet — LUKA swaps their portion</Label>
             <div className="flex flex-wrap gap-1.5">
               {DIETS.map((d) => (
                 <Chip key={d.v || "all"} active={member.diet === d.v} onClick={() => set("diet", d.v)}>

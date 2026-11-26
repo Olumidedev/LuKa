@@ -219,7 +219,7 @@ export function MealSheet({ target, onClose }: { target: MealRef | null; onClose
               {card.safety.length > 0 && <p className="mt-3 text-[13px] text-leaf">{card.safety.join(" · ")}</p>}
               {recipe.source.type !== "library" && (
                 <p className="mt-3 text-[12px] text-muted">
-                  {recipe.source.type === "ai" ? "Written with AI and checked by Luka's allergen and diet rules." : `Your recipe${recipe.source.credit ? ` · ${recipe.source.credit}` : ""}`}
+                  {recipe.source.type === "ai" ? "Written by Claude and checked by LUKA's allergen and diet rules." : `Your recipe${recipe.source.credit ? ` · ${recipe.source.credit}` : ""}`}
                   {recipe.source.url && (
                     <>
                       {" · "}

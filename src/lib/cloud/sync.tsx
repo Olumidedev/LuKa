@@ -17,9 +17,11 @@ interface Cloud {
   /** Load a different household (e.g. one just joined by invite). */
   switchTo: (householdId: string) => void;
   error: string | null;
+  /** True once the signed-in person's household has been looked up (or there's no one signed in). */
+  ready: boolean;
 }
 
-const CloudCtx = createContext<Cloud>({ status: "local", household: null, invite: async () => "", switchTo: () => {}, error: null });
+const CloudCtx = createContext<Cloud>({ status: "local", household: null, invite: async () => "", switchTo: () => {}, error: null, ready: true });
 export const useCloud = () => useContext(CloudCtx);
 
 const PREF = "luka:household";
@@ -55,6 +57,7 @@ export function CloudSync({ children }: { children: React.ReactNode }) {
   const [household, setHousehold] = useState<CloudHousehold | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [nonce, setNonce] = useState(0);
+  const [ready, setReady] = useState(false);
 
   const hid = useRef<string | null>(null);
   const version = useRef(0);
@@ -77,6 +80,7 @@ export function CloudSync({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!hydrated) return;
     if (!user) {
+      setReady(true);
       connectedFor.current = null;
       hid.current = null;
       setHousehold(null);
@@ -85,6 +89,7 @@ export function CloudSync({ children }: { children: React.ReactNode }) {
     }
     if (connectedFor.current === user.id) return;
     connectedFor.current = user.id;
+    setReady(false);
     track("signed_in", { provider: String(user.app_metadata?.provider ?? "email") });
     let live = true;
     (async () => {
@@ -97,6 +102,7 @@ export function CloudSync({ children }: { children: React.ReactNode }) {
           // First sign-in: this device's household becomes the account's household.
           if (!stateRef.current.onboarded) {
             setStatus("synced");
+            setReady(true);
             return; // created after onboarding finishes (see below)
           }
           const id = await createHousehold(householdName(stateRef.current), stateRef.current);
@@ -129,6 +135,8 @@ export function CloudSync({ children }: { children: React.ReactNode }) {
         setError(e instanceof Error ? e.message : String(e));
         setStatus(navigator.onLine ? "error" : "offline");
         connectedFor.current = null;
+      } finally {
+        if (live) setReady(true);
       }
     })();
     return () => {
@@ -165,7 +173,7 @@ export function CloudSync({ children }: { children: React.ReactNode }) {
             if (remote.state) {
               store.set(BACKUP, JSON.stringify(s));
               applyRemote(remote.state, remote.version);
-              toast({ text: "Someone else in your household changed the plan, so Luka loaded their version." });
+              toast({ text: "Someone else in your household changed the plan, so LUKA loaded their version." });
             }
           }
         }
@@ -216,7 +224,7 @@ export function CloudSync({ children }: { children: React.ReactNode }) {
     setNonce((n) => n + 1);
   }, []);
 
-  const value = useMemo(() => ({ status, household, invite, switchTo, error }), [status, household, invite, switchTo, error]);
+  const value = useMemo(() => ({ status, household, invite, switchTo, error, ready }), [status, household, invite, switchTo, error, ready]);
   return <CloudCtx.Provider value={value}>{children}</CloudCtx.Provider>;
 }
 

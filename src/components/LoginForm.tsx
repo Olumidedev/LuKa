@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/cloud/auth";
 import { getSupabase, googleEnabled } from "@/lib/cloud/supabase";
+import { LogoMark, Wordmark } from "./brand";
 import { Button, Label, Segmented, cx, inputCls } from "./ui";
 
 type Mode = "signin" | "signup" | "link";
@@ -29,9 +30,9 @@ export function LoginForm() {
     return (
       <Shell>
         <h1 className="font-display text-3xl font-semibold">Sign-in isn&apos;t switched on yet</h1>
-        <p className="mt-2 text-muted">This copy of Luka saves everything on your device. Accounts and sync turn on once the server has a Supabase project.</p>
+        <p className="mt-2 text-muted">This copy of LUKA saves everything on your device. Accounts and sync turn on once the server has a Supabase project.</p>
         <Link href="/" className="mt-6 inline-block font-semibold text-saffron-ink underline">
-          Back to Luka
+          Open LUKA
         </Link>
       </Shell>
     );
@@ -74,8 +75,8 @@ export function LoginForm() {
 
   return (
     <Shell>
-      <h1 className="font-display text-3xl font-semibold">{mode === "signup" ? "Create your account" : "Sign in to Luka"}</h1>
-      <p className="mt-2 text-muted">Keep your household, plans and recipes on every device, and cook together with the people you live with.</p>
+      <h1 className="font-display text-3xl font-semibold">{mode === "signup" ? "Create your account" : "Welcome back"}</h1>
+      <p className="mt-2 text-muted">{mode === "signup" ? "It takes a minute. Then tell LUKA who you cook for." : "Sign in to open your kitchen."}</p>
 
       {googleEnabled() && (
         <>
@@ -121,23 +122,34 @@ export function LoginForm() {
           {busy ? "One moment…" : mode === "signin" ? "Sign in" : mode === "signup" ? "Create account" : "Send link"}
         </Button>
       </form>
-      <p className="mt-6 text-sm text-muted">
-        <Link href="/" className="font-semibold text-fg underline">
-          Continue without an account
-        </Link>{" "}
-        — everything stays on this device.
-      </p>
     </Shell>
   );
 }
 
 function Shell({ children }: { children: React.ReactNode }) {
   return (
-    <main className="mx-auto max-w-md px-[max(20px,env(safe-area-inset-left))] py-12 sm:py-20">
-      <Link href="/" className="font-display text-3xl font-bold text-saffron">
-        Luka
-      </Link>
-      <div className="mt-8">{children}</div>
+    <main className="grid min-h-dvh lg:grid-cols-[1.1fr_1fr]">
+      <section className="relative flex flex-col justify-between gap-10 overflow-hidden bg-[#1c1917] px-[max(24px,env(safe-area-inset-left))] py-10 text-[#faf8f5] lg:px-14 lg:py-14">
+        <span className="inline-flex items-center gap-3">
+          <LogoMark size={40} className="[--fg:#faf8f5] [--bg:#1c1917]" />
+          <Wordmark className="text-3xl" />
+        </span>
+        <div className="max-w-md">
+          <h2 className="font-display text-4xl font-semibold leading-tight lg:text-5xl">Your calm, culturally fluent sous-chef.</h2>
+          <ul className="mt-6 grid gap-3 text-[15px] text-[#faf8f5]/80">
+            <li>Meal plans from the kitchens you grew up with, and the ones you love.</li>
+            <li>One shopping list. Buy once, cook across the week, waste less.</li>
+            <li>Step-by-step cooking anyone at home can follow.</li>
+          </ul>
+        </div>
+        <p className="hidden text-[13px] text-[#faf8f5]/50 lg:block">Allergies are always respected. No judgement for takeout nights.</p>
+        <svg aria-hidden className="pointer-events-none absolute -right-16 -bottom-16 h-72 w-72 opacity-[0.08]" viewBox="0 0 48 48">
+          <path d="M5 22h38v2a19 17 0 0 1-38 0v-2z" fill="#d97706" />
+        </svg>
+      </section>
+      <section className="flex items-center justify-center px-[max(20px,env(safe-area-inset-left))] py-10">
+        <div className="w-full max-w-md">{children}</div>
+      </section>
     </main>
   );
 }

@@ -48,7 +48,7 @@ export function PantryBar({ compact }: { compact?: boolean }) {
           else d.pantry.push({ key: it.key, qty: it.qty, useWithinDays: it.useWithinDays });
         }
       });
-      toast({ text: found.length ? `Found ${found.length} items. Luka will use the ones that spoil soonest first.` : "Couldn't recognise anything in that photo." });
+      toast({ text: found.length ? `Found ${found.length} items. LUKA will use the ones that spoil soonest first.` : "Couldn't recognise anything in that photo." });
     } catch (e) {
       toast({ text: e instanceof Error ? e.message : "The scan didn't work. Try another photo." });
     } finally {

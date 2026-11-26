@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { Logo } from "@/components/brand";
 import { Button } from "@/components/ui";
 import { useAuth } from "@/lib/cloud/auth";
 import { track } from "@/lib/analytics";
@@ -51,12 +52,12 @@ export default function JoinPage() {
 
   return (
     <main className="mx-auto max-w-md px-[max(20px,env(safe-area-inset-left))] py-16">
-      <Link href="/" className="font-display text-3xl font-bold text-saffron">
-        Luka
+      <Link href="/" aria-label="LUKA home">
+        <Logo size={34} wordClass="text-2xl" />
       </Link>
       <h1 className="mt-8 font-display text-3xl font-semibold">Join a household</h1>
       {!configured ? (
-        <p className="mt-2 text-muted">Accounts aren&apos;t switched on for this copy of Luka yet.</p>
+        <p className="mt-2 text-muted">Accounts aren&apos;t switched on for this copy of LUKA yet.</p>
       ) : !code ? (
         <p className="mt-2 text-muted">This invite link is incomplete. Ask for a new one, and copy everything after the “#”.</p>
       ) : !ready ? null : !user ? (

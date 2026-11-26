@@ -63,7 +63,7 @@ export function GroceryTab() {
     });
 
   const copyList = async () => {
-    const lines = [`Luka shopping list${firstDay ? ` (${firstDay.dow} ${firstDay.date})` : ""}`];
+    const lines = [`LUKA shopping list${firstDay ? ` (${firstDay.dow} ${firstDay.date})` : ""}`];
     for (const s of multiStore ? state.stores : [state.stores[0]]) {
       if (multiStore) lines.push("", s.name.toUpperCase());
       for (const a of AISLES) {

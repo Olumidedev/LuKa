@@ -1,5 +1,6 @@
 import { INGREDIENTS } from "../data/ingredients";
 import { LIBRARY } from "../data/recipes";
+import { getCatalog, type Catalog } from "../state/catalogRegistry";
 import type { AppState, Ingredient, Recipe } from "../types";
 import { gateRecipe, householdPortions, type GateResult } from "./gate";
 
@@ -13,9 +14,10 @@ export interface EngineContext {
   portions: number;
 }
 
-export function buildContext(state: AppState): EngineContext {
-  const ings = { ...INGREDIENTS, ...state.customIngredients };
-  const recipes = [...LIBRARY, ...state.customRecipes];
+export function buildContext(state: AppState, catalog: Catalog = getCatalog()): EngineContext {
+  const ings = { ...INGREDIENTS, ...catalog.ingredients, ...state.customIngredients };
+  const seen = new Set<string>();
+  const recipes = [...LIBRARY, ...catalog.recipes, ...state.customRecipes].filter((r) => !seen.has(r.id) && seen.add(r.id));
   const byId = new Map(recipes.map((r) => [r.id, r]));
   const gates = new Map(recipes.map((r) => [r.id, gateRecipe(r, state.members, ings)]));
   return { state, ings, recipes, byId, gates, portions: householdPortions(state.members) };

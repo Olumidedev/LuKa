@@ -1,9 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
-import { analyticsEnabled, setAnalyticsEnabled } from "@/lib/analytics";
-import { FeedbackSheet } from "./FeedbackSheet";
 import { useAuth } from "@/lib/cloud/auth";
 import { useCloud } from "@/lib/cloud/sync";
 import { pickLabel } from "@/lib/data/countries";
@@ -22,9 +20,6 @@ export function HouseholdTab() {
   const ui = useUI();
   const toast = useToast();
   const [confirmReset, setConfirmReset] = useState(false);
-  const [feedback, setFeedback] = useState(false);
-  const [stats, setStats] = useState(true);
-  useEffect(() => setStats(analyticsEnabled()), []);
   const auth = useAuth();
   const cloud = useCloud();
 
@@ -47,7 +42,7 @@ export function HouseholdTab() {
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <h1 className="font-display text-3xl font-semibold">Household</h1>
-            <p className="text-sm text-muted">Everyone Luka cooks for. Life stage stays on this device and only nudges nutrients.</p>
+            <p className="text-sm text-muted">Everyone LUKA cooks for. Life stage stays on this device and only nudges nutrients.</p>
           </div>
           <Button
             onClick={() =>
@@ -153,28 +148,6 @@ export function HouseholdTab() {
             onChange={(e) => update((d) => void (d.settings.takeoutPerPerson = Math.max(0, Number(e.target.value) || 0)))}
           />
         </div>
-      </section>
-
-      <section className="grid gap-3">
-        <h2 className="font-display text-2xl font-semibold">Help make Luka better</h2>
-        <label className="flex items-start gap-3 text-sm">
-          <input
-            type="checkbox"
-            className="mt-0.5 size-4 accent-[var(--saffron)]"
-            checked={stats}
-            onChange={(e) => {
-              setStats(e.target.checked);
-              setAnalyticsEnabled(e.target.checked);
-            }}
-          />
-          <span>
-            <b className="font-semibold">Share anonymous usage stats.</b> Which features get used and when something crashes. Never names, recipes or health details.
-          </span>
-        </label>
-        <Button className="justify-self-start" onClick={() => setFeedback(true)}>
-          Report a problem or share an idea
-        </Button>
-        <FeedbackSheet open={feedback} onClose={() => setFeedback(false)} />
       </section>
 
       <section className="grid gap-2 border-t border-line pt-6">

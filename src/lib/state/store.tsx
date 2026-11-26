@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { useCatalog } from "../cloud/catalog";
 import { buildContext, type EngineContext } from "../engine/context";
 import type { AppState } from "../types";
 import { defaultState } from "./defaults";
@@ -73,7 +74,8 @@ export function StoreProvider({ children, adapter = localAdapter }: { children: 
     });
   }, []);
 
-  const ctx = useMemo(() => buildContext(state), [state]);
+  const catalog = useCatalog();
+  const ctx = useMemo(() => buildContext(state, catalog), [state, catalog]);
   const value = useMemo(() => ({ state, ctx, hydrated, update, replace: setState }), [state, ctx, hydrated, update]);
   return <StoreCtx.Provider value={value}>{children}</StoreCtx.Provider>;
 }

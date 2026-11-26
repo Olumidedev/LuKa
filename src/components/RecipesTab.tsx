@@ -5,6 +5,7 @@ import { ALL_COUNTRIES } from "@/lib/data/countries";
 import { aiGenerateRecipes, aiParseRecipe, useAIEnabled, type AIRecipes } from "@/lib/ai/client";
 import { normalizeRecipe, parseIngredientLine } from "@/lib/ai/normalize";
 import { track } from "@/lib/analytics";
+import { useCatalog } from "@/lib/cloud/catalog";
 import { useConfig } from "@/lib/cloud/config";
 import { cuisineMatch } from "@/lib/engine/cuisine";
 import { gateRecipe } from "@/lib/engine/gate";
@@ -25,14 +26,15 @@ export function RecipesTab() {
   const [adding, setAdding] = useState(false);
   const [generating, setGenerating] = useState(false);
 
+  const customIds = useMemo(() => new Set(state.customRecipes.map((r) => r.id)), [state.customRecipes]);
   const list = useMemo(() => {
     const query = q.trim().toLowerCase();
     return ctx.recipes
       .filter((r) => !meal || r.meals.includes(meal))
       .filter((r) => !query || r.name.toLowerCase().includes(query) || r.countries.some((c) => c.toLowerCase().includes(query)))
-      .filter((r) => !mine || !state.cuisines.length || r.source.type !== "library" || cuisineMatch(r, state.cuisines).score > 0)
-      .sort((a, b) => Number(b.source.type !== "library") - Number(a.source.type !== "library") || a.name.localeCompare(b.name));
-  }, [ctx.recipes, q, meal, mine, state.cuisines]);
+      .filter((r) => !mine || !state.cuisines.length || customIds.has(r.id) || cuisineMatch(r, state.cuisines).score > 0)
+      .sort((a, b) => Number(customIds.has(b.id)) - Number(customIds.has(a.id)) || a.name.localeCompare(b.name));
+  }, [ctx.recipes, q, meal, mine, state.cuisines, customIds]);
 
   return (
     <div className="grid gap-5">
@@ -85,7 +87,7 @@ export function RecipesTab() {
                   {!gate.ok && ` · ${gate.reasons[0]}`}
                 </span>
               </button>
-              {r.source.type !== "library" && (
+              {customIds.has(r.id) && (
                 <Button
                   size="sm"
                   variant="danger"
@@ -110,14 +112,16 @@ export function RecipesTab() {
   );
 }
 
-function useSaveRecipes() {
+/** shared = recipes already stored in the shared catalog (don't copy them into the household). */
+function useSaveRecipes(shared = false) {
   const { update, ctx, state } = useStore();
   const toast = useToast();
   return (res: AIRecipes) => {
-    update((d) => {
-      Object.assign(d.customIngredients, res.ingredients);
-      d.customRecipes.push(...res.recipes);
-    });
+    if (!shared)
+      update((d) => {
+        Object.assign(d.customIngredients, res.ingredients);
+        d.customRecipes.push(...res.recipes);
+      });
     // Same deterministic gate as the library, applied to the new recipes.
     const ings = { ...ctx.ings, ...res.ingredients };
     track("recipe_added", { source: res.recipes[0]?.source.type ?? "user", count: res.recipes.length });
@@ -288,7 +292,8 @@ function AddRecipeSheet({ open, onClose, ai }: { open: boolean; onClose: () => v
 
 function GenerateSheet({ open, onClose, ai }: { open: boolean; onClose: () => void; ai: boolean }) {
   const { state } = useStore();
-  const save = useSaveRecipes();
+  const save = useSaveRecipes(true);
+  const { refresh: refreshCatalog } = useCatalog();
   const picks = state.cuisines.filter((p) => p.type === "country").map((p) => p.value);
   const [country, setCountry] = useState(picks[0] ?? "");
   const [busy, setBusy] = useState(false);
@@ -302,7 +307,8 @@ function GenerateSheet({ open, onClose, ai }: { open: boolean; onClose: () => vo
     }
     setBusy(true);
     try {
-      save(await aiGenerateRecipes(country, state.members));
+      save(await aiGenerateRecipes(country));
+      await refreshCatalog();
       track("ai_recipes_generated", { country });
       onClose();
     } catch (e) {
@@ -321,7 +327,7 @@ function GenerateSheet({ open, onClose, ai }: { open: boolean; onClose: () => vo
         <div className="flex items-center justify-between gap-3">
           <span className="text-[13px] text-danger">{err}</span>
           <Button variant="primary" onClick={run} disabled={!ai || busy}>
-            {busy ? "Writing recipes…" : "Generate 4 recipes"}
+            {busy ? "Writing recipes…" : "Generate 6 recipes"}
           </Button>
         </div>
       }
@@ -329,7 +335,7 @@ function GenerateSheet({ open, onClose, ai }: { open: boolean; onClose: () => vo
       <div className="grid gap-4">
         {!ai && <p className="rounded-2xl bg-sunk p-3 text-[13px] text-muted">This needs the AI service. Add a Gemini API key on the server (see .env.example) and reload.</p>}
         <p className="text-sm text-muted">
-          Luka asks the model for everyday home dishes from one country, sending only your household&apos;s allergens and food rules, never names or health details. Every recipe it writes is checked again here before it can be planned.
+          LUKA asks Claude for six everyday home dishes from one country. They join the shared LUKA catalog, so everyone who cooks from that country gets them too. Nothing about your household is sent, and every recipe is checked against your household&apos;s allergies and rules before it can be planned.
         </p>
         <div>
           <Label htmlFor="gen-country">Country</Label>

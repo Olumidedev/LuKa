@@ -1,6 +1,6 @@
-# Luka
+# LUKA
 
-Lu's Kitchen Assistant: a culturally fluent sous-chef. Tell it who's eating and which kitchens you cook from (Nigeria and the Caribbean, Lebanon and Morocco, anywhere). Luka plans an instant meal, a working week or two weeks of breakfasts, lunches and dinners, then writes the shopping list and walks whoever is cooking through each dish.
+Lu's Kitchen Assistant: a culturally fluent sous-chef. Tell it who's eating and which kitchens you cook from (Nigeria and the Caribbean, Lebanon and Morocco, anywhere). LUKA plans an instant meal, a working week or two weeks of breakfasts, lunches and dinners, then writes the shopping list and walks whoever is cooking through each dish.
 
 ## Run it
 
@@ -18,13 +18,14 @@ npm run build     # production build
 
 ### Optional AI features
 
-Copy `.env.example` to `.env.local` and set `GEMINI_API_KEY` to turn on:
+Set `ANTHROPIC_API_KEY` (server-side) to turn on Claude:
 
-- **Generate by country:** four home recipes for any of the 170 countries.
-- **Paste a recipe:** turns blog text or a family recipe into a Luka recipe, with credit.
+- **A growing menu:** when a cuisine someone picks has few recipes, Claude writes more. They're stored in a shared Supabase catalog (`supabase/migrations/20261126030000_recipe_catalog.sql`) so every household that cooks from that country benefits. Admins can hide or delete them, or generate more, under Admin → Recipes.
+- **Generate by country:** six home recipes for any of the 170 countries.
+- **Paste a recipe:** turns blog text or a family recipe into a LUKA recipe, with credit.
 - **Scan fridge photo:** marks what's already at home and what needs using soon.
 
-Only household *constraints* (allergens, food rules) are sent to the model, never names or health details. Everything the model returns is re-checked by the same deterministic allergen gate as the built-in library.
+Nothing about a household is sent to Claude. Everything it writes is re-checked by the same fixed-rule allergen and diet check as the built-in library before it can be planned. AI features need a signed-in user, and each person gets `AI_DAILY_LIMIT` new batches a day.
 
 ### Accounts and sync
 

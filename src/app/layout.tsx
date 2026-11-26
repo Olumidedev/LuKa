@@ -1,11 +1,12 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { Providers } from "@/components/Providers";
+import { THEME_BOOT } from "@/lib/theme";
 
 export const metadata: Metadata = {
-  title: "Luka",
-  description: "Your culturally fluent sous-chef: household-aware meal plans, chained groceries and guided cooking.",
-  applicationName: "Luka",
+  title: "LUKA",
+  description: "Your calm, culturally fluent sous-chef: meal plans from the kitchens you love, one shopping list, and guided cooking.",
+  applicationName: "LUKA",
 };
 
 export const viewport: Viewport = {
@@ -20,8 +21,9 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_BOOT }} />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
         {/* eslint-disable-next-line @next/next/no-page-custom-font */}

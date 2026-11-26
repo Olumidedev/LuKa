@@ -1,4 +1,7 @@
+import { readFileSync } from "node:fs";
 import type { NextConfig } from "next";
+
+const pkg = JSON.parse(readFileSync("./package.json", "utf8")) as { version: string };
 
 // Security headers applied to every route (Day-1 security baseline, BRD §5 v3.2).
 const securityHeaders = [
@@ -11,6 +14,10 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  env: {
+    NEXT_PUBLIC_APP_VERSION: pkg.version,
+    NEXT_PUBLIC_BUILD: (process.env.VERCEL_GIT_COMMIT_SHA || "").slice(0, 7) || new Date().toISOString().slice(0, 10),
+  },
   reactStrictMode: true,
   poweredByHeader: false,
   async headers() {

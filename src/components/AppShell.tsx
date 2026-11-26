@@ -1,51 +1,69 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { trackOnce } from "@/lib/analytics";
+import { useAuth } from "@/lib/cloud/auth";
 import { useConfig } from "@/lib/cloud/config";
+import { useCloud } from "@/lib/cloud/sync";
+import { useAutoTopUp } from "@/lib/cloud/topup";
 import { useIsAdmin } from "@/lib/cloud/useIsAdmin";
 import type { CookCard } from "@/lib/engine/cookcard";
 import { regenerate } from "@/lib/state/actions";
 import { useStore } from "@/lib/state/store";
 import type { CuisinePick } from "@/lib/types";
-import { AccountMenu } from "./AccountMenu";
+import { AboutView } from "./AboutView";
+import { AccountView } from "./AccountView";
+import { Logo, LogoMark } from "./brand";
 import { CookMode } from "./CookMode";
 import { CuisinePicker } from "./CuisinePicker";
 import { GroceryTab } from "./GroceryTab";
+import { HomeView } from "./HomeView";
 import { HouseholdTab } from "./HouseholdTab";
 import { MealSheet } from "./MealSheet";
+import { MenuDrawer, TAB_LABEL } from "./MenuDrawer";
 import { Onboarding } from "./Onboarding";
 import { PlanTab } from "./PlanTab";
 import { RecipesTab } from "./RecipesTab";
 import { UICtx, type MealRef, type Tab } from "./uiState";
 import { Button, Sheet, cx } from "./ui";
 
-// Loaded only when an admin opens the tab, so other people never download it.
+// Loaded only when an admin opens it, so other people never download it.
 const AdminPanel = dynamic(() => import("./admin/AdminApp"), { ssr: false, loading: () => <p className="text-muted">Loading admin…</p> });
 
-const ADMIN_TAB = { key: "admin" as Tab, label: "Admin", icon: <path d="M12 3l8 3v6c0 4.5-3.4 8.3-8 9-4.6-.7-8-4.5-8-9V6l8-3zm-3 9l2 2 4-4" /> };
+function Splash({ text }: { text?: string }) {
+  return (
+    <div className="flex min-h-dvh flex-col items-center justify-center gap-4">
+      <LogoMark size={56} className="animate-pulse" />
+      {text && <p className="text-sm text-muted">{text}</p>}
+    </div>
+  );
+}
 
-const TABS: { key: Tab; label: string; icon: React.ReactNode }[] = [
-  { key: "plan", label: "Plan", icon: <path d="M4 5h16M4 12h16M4 19h10" /> },
-  { key: "groceries", label: "Groceries", icon: <path d="M3 4h2l2.4 11h11.2L21 8H7M9 20a1 1 0 100-2 1 1 0 000 2zm9 0a1 1 0 100-2 1 1 0 000 2z" /> },
-  { key: "recipes", label: "Recipes", icon: <path d="M5 4h11a3 3 0 013 3v13H8a3 3 0 01-3-3V4zm0 13a3 3 0 013-3h11" /> },
-  { key: "household", label: "Household", icon: <path d="M8 11a3 3 0 100-6 3 3 0 000 6zm8 0a3 3 0 100-6 3 3 0 000 6zM2 20c0-3 3-5 6-5s6 2 6 5m0-4c1-.7 2-1 3-1 3 0 5 2 5 5" /> },
-];
-
+/** Sign-in → household → Home, with everything else one menu tap away. */
 export function AppShell() {
   const { state, hydrated, update } = useStore();
-  const [tab, setTab] = useState<Tab>("plan");
+  const auth = useAuth();
+  const cloud = useCloud();
+  const router = useRouter();
+  const config = useConfig();
+  const isAdmin = useIsAdmin();
+  const topUp = useAutoTopUp();
+  const [tab, setTab] = useState<Tab>("home");
+  const [menu, setMenu] = useState(false);
   const [meal, setMeal] = useState<MealRef | null>(null);
   const [cook, setCook] = useState<CookCard | null>(null);
   const [cuisinesOpen, setCuisinesOpen] = useState(false);
   const [draft, setDraft] = useState<CuisinePick[]>([]);
-  const config = useConfig();
-  useEffect(() => trackOnce("app_opened"), []);
-  const isAdmin = useIsAdmin();
-  const tabs = isAdmin ? [...TABS, ADMIN_TAB] : TABS;
+
+  const needsLogin = auth.configured && auth.ready && !auth.user;
   useEffect(() => {
-    if (!isAdmin && tab === "admin") setTab("plan");
+    if (needsLogin) router.replace("/login");
+  }, [needsLogin, router]);
+  useEffect(() => trackOnce("app_opened"), []);
+  useEffect(() => {
+    if (!isAdmin && tab === "admin") setTab("home");
   }, [isAdmin, tab]);
 
   const openCuisines = useCallback(() => {
@@ -66,37 +84,41 @@ export function AppShell() {
         setCook(c);
       },
       openCuisines,
+      topUp,
     }),
-    [tab, openCuisines],
+    [tab, openCuisines, topUp],
   );
 
-  if (!hydrated) return <div className="min-h-dvh" />;
+  const signOut = async () => {
+    setMenu(false);
+    await auth.signOut();
+    router.replace("/login");
+  };
+
+  if (!hydrated || !auth.ready || needsLogin) return <Splash />;
+  if (auth.user && !cloud.ready) return <Splash text="Opening your kitchen…" />;
   if (!state.onboarded) return <Onboarding />;
 
   return (
     <UICtx.Provider value={ui}>
-      <div className="min-h-dvh pb-24 sm:pb-10">
+      <div className="min-h-dvh pb-10">
         <header className="sticky top-0 z-30 border-b border-line bg-bg/90 backdrop-blur">
-          <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-[max(16px,env(safe-area-inset-left))] py-3">
-            <button type="button" onClick={() => ui.setTab("plan")} className="font-display text-2xl font-bold text-saffron">
-              Luka
+          <div className="mx-auto flex max-w-6xl items-center gap-3 px-[max(16px,env(safe-area-inset-left))] py-2.5">
+            <button
+              type="button"
+              onClick={() => setMenu(true)}
+              aria-label="Open menu"
+              aria-expanded={menu}
+              className="-ml-2 rounded-full p-2 text-fg hover:bg-sunk"
+            >
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                <path d="M4 7h16M4 12h16M4 17h16" />
+              </svg>
             </button>
-            <div className="flex items-center gap-3">
-            <nav className="hidden gap-1 sm:flex" aria-label="Sections">
-              {tabs.map((t) => (
-                <button
-                  key={t.key}
-                  type="button"
-                  aria-current={tab === t.key ? "page" : undefined}
-                  onClick={() => ui.setTab(t.key)}
-                  className={cx("rounded-full px-4 py-2 text-sm font-semibold transition", tab === t.key ? "bg-fg text-bg" : "text-muted hover:text-fg")}
-                >
-                  {t.label}
-                </button>
-              ))}
-            </nav>
-            <AccountMenu />
-            </div>
+            <button type="button" onClick={() => ui.setTab("home")} aria-label="LUKA home">
+              <Logo size={28} wordClass="text-xl" />
+            </button>
+            <span className="ml-auto text-sm font-semibold text-muted">{tab === "home" ? "" : TAB_LABEL[tab]}</span>
           </div>
         </header>
 
@@ -105,32 +127,20 @@ export function AppShell() {
             {config.announcement.text}
           </div>
         )}
+
         <main className="mx-auto max-w-6xl px-[max(16px,env(safe-area-inset-left))] py-6 sm:py-8">
+          {tab === "home" && <HomeView />}
           {tab === "plan" && <PlanTab />}
           {tab === "groceries" && <GroceryTab />}
           {tab === "recipes" && <RecipesTab />}
           {tab === "household" && <HouseholdTab />}
           {tab === "admin" && isAdmin && <AdminPanel />}
+          {tab === "account" && <AccountView />}
+          {tab === "about" && <AboutView />}
         </main>
-
-        <nav style={{ gridTemplateColumns: `repeat(${tabs.length}, minmax(0, 1fr))` }} className="fixed inset-x-0 bottom-0 z-30 grid border-t border-line bg-surface/95 pb-[env(safe-area-inset-bottom)] backdrop-blur sm:hidden" aria-label="Sections">
-          {tabs.map((t) => (
-            <button
-              key={t.key}
-              type="button"
-              aria-current={tab === t.key ? "page" : undefined}
-              onClick={() => ui.setTab(t.key)}
-              className={cx("flex flex-col items-center gap-0.5 py-2.5 text-[11px] font-semibold", tab === t.key ? "text-saffron" : "text-muted")}
-            >
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                {t.icon}
-              </svg>
-              {t.label}
-            </button>
-          ))}
-        </nav>
       </div>
 
+      <MenuDrawer open={menu} onClose={() => setMenu(false)} tab={tab} onPick={ui.setTab} isAdmin={isAdmin} onSignOut={signOut} />
       <MealSheet target={meal} onClose={() => setMeal(null)} />
       {cook && <CookMode card={cook} onClose={() => setCook(null)} />}
       <Sheet

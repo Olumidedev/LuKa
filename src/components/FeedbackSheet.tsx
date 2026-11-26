@@ -18,7 +18,7 @@ export function FeedbackSheet({ open, onClose }: { open: boolean; onClose: () =>
     track("feedback", { kind, message: m, screen: `${window.innerWidth}x${window.innerHeight}` });
     setMessage("");
     onClose();
-    toast({ text: "Thanks. Your note went straight to the Luka team." });
+    toast({ text: "Thanks. Your note went straight to the LUKA team." });
   };
 
   return (
