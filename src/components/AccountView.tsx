@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { analyticsEnabled, setAnalyticsEnabled, track } from "@/lib/analytics";
 import { useAuth } from "@/lib/cloud/auth";
+import { useProfile } from "@/lib/cloud/profile";
 import { getSupabase } from "@/lib/cloud/supabase";
 import { useCloud, type SyncStatus } from "@/lib/cloud/sync";
 import { FeedbackSheet } from "./FeedbackSheet";
@@ -22,6 +23,7 @@ const STATUS: Record<SyncStatus, string> = {
 export function AccountView() {
   const { user, signOut } = useAuth();
   const cloud = useCloud();
+  const profile = useProfile();
   const toast = useToast();
   const router = useRouter();
   const sb = getSupabase();
@@ -35,16 +37,9 @@ export function AccountView() {
 
   useEffect(() => setStats(analyticsEnabled()), []);
   useEffect(() => {
-    if (!sb || !user) return;
-    sb.from("profiles")
-      .select("display_name")
-      .eq("id", user.id)
-      .maybeSingle()
-      .then(({ data }) => {
-        setDisplayName(data?.display_name ?? "");
-        setSavedName(data?.display_name ?? "");
-      });
-  }, [sb, user]);
+    setDisplayName(profile.displayName ?? "");
+    setSavedName(profile.displayName ?? "");
+  }, [profile.displayName]);
   useEffect(() => setHhName(cloud.household?.name ?? ""), [cloud.household]);
 
   if (!user || !sb) return <p className="text-muted">Sign in to manage your account.</p>;
@@ -52,10 +47,9 @@ export function AccountView() {
 
   const saveName = async () => {
     const v = displayName.trim().slice(0, 80);
-    const { error } = await sb.from("profiles").update({ display_name: v || null }).eq("id", user.id);
-    if (error) return toast({ text: "Couldn't save your name. Try again." });
+    if (!(await profile.setDisplayName(v))) return toast({ text: "Couldn't save your name. Try again." });
     setSavedName(v);
-    toast({ text: "Saved." });
+    toast({ text: v ? `LUKA will call you ${v}.` : "Saved." });
   };
 
   const renameHousehold = async () => {

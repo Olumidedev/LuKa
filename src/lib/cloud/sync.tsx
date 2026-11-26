@@ -3,6 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useToast } from "@/components/ui";
 import { track } from "../analytics";
+import { defaultState } from "../state/defaults";
 import { useStore } from "../state/store";
 import type { AppState } from "../types";
 import { useAuth } from "./auth";
@@ -26,6 +27,8 @@ export const useCloud = () => useContext(CloudCtx);
 
 const PREF = "luka:household";
 const BACKUP = "luka:v1:before-sync";
+/** Which signed-in person the data on this device belongs to. */
+const OWNER = "luka:owner";
 const store = {
   get: (k: string) => {
     try {
@@ -37,6 +40,13 @@ const store = {
   set: (k: string, v: string) => {
     try {
       localStorage.setItem(k, v);
+    } catch {
+      /* ignore */
+    }
+  },
+  del: (...ks: string[]) => {
+    try {
+      for (const k of ks) localStorage.removeItem(k);
     } catch {
       /* ignore */
     }
@@ -80,6 +90,11 @@ export function CloudSync({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!hydrated) return;
     if (!user) {
+      // Signing out leaves nothing behind for the next person on this device.
+      if (connectedFor.current) {
+        store.del(PREF, BACKUP, OWNER);
+        replace(defaultState());
+      }
       setReady(true);
       connectedFor.current = null;
       hid.current = null;
@@ -89,6 +104,15 @@ export function CloudSync({ children }: { children: React.ReactNode }) {
     }
     if (connectedFor.current === user.id) return;
     connectedFor.current = user.id;
+    // Each person has their own lane: never show or adopt data another account left on this device.
+    const owner = store.get(OWNER);
+    const mine = owner === user.id;
+    if (!mine) {
+      store.del(PREF, BACKUP);
+      if (owner || stateRef.current.onboarded) replace(defaultState());
+      stateRef.current = defaultState();
+    }
+    store.set(OWNER, user.id);
     setReady(false);
     track("signed_in", { provider: String(user.app_metadata?.provider ?? "email") });
     let live = true;
@@ -99,8 +123,8 @@ export function CloudSync({ children }: { children: React.ReactNode }) {
         const pick = list.find((h) => h.id === store.get(PREF)) ?? list[0];
         if (!live) return;
         if (!pick) {
-          // First sign-in: this device's household becomes the account's household.
-          if (!stateRef.current.onboarded) {
+          // No household yet: set one up (onboarding), or save the one this person already set up here.
+          if (!mine || !stateRef.current.onboarded) {
             setStatus("synced");
             setReady(true);
             return; // created after onboarding finishes (see below)
@@ -142,7 +166,7 @@ export function CloudSync({ children }: { children: React.ReactNode }) {
     return () => {
       live = false;
     };
-  }, [user, hydrated, applyRemote, toast, nonce]);
+  }, [user, hydrated, applyRemote, toast, nonce, replace]);
 
   // Push local changes (debounced, one write in flight, optimistic concurrency).
   useEffect(() => {

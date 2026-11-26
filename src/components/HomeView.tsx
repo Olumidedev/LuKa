@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useAIEnabled } from "@/lib/ai/client";
-import { useAuth } from "@/lib/cloud/auth";
+import { useProfile } from "@/lib/cloud/profile";
 import { useCloud } from "@/lib/cloud/sync";
 import { dayLabel, toISO } from "@/lib/engine/dates";
 import { MEALS, MEAL_LABEL, prepTips } from "@/lib/engine/planner";
@@ -22,13 +22,13 @@ function greeting(now = new Date()) {
 /** Landing page after sign-in: today at a glance, in a calm voice. */
 export function HomeView() {
   const { state, ctx, update } = useStore();
-  const { user } = useAuth();
+
   const ui = useUI();
   const cloud = useCloud();
   const ai = useAIEnabled();
   const [asking, setAsking] = useState(false);
   const plan = state.plan;
-  const name = state.members[0]?.name?.trim() || user?.email?.split("@")[0] || "";
+  const { name } = useProfile();
   const today = toISO(new Date());
 
   const trips = useMemo(() => (plan ? computeShopping(ctx, planEntries(ctx, plan), weeklyTrip) : []), [ctx, plan]);

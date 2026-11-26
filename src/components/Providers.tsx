@@ -3,6 +3,7 @@
 import { AuthProvider } from "@/lib/cloud/auth";
 import { CatalogProvider } from "@/lib/cloud/catalog";
 import { ConfigProvider } from "@/lib/cloud/config";
+import { ProfileProvider } from "@/lib/cloud/profile";
 import { CloudSync } from "@/lib/cloud/sync";
 import { StoreProvider } from "@/lib/state/store";
 import { ToastProvider } from "./ui";
@@ -10,6 +11,7 @@ import { ToastProvider } from "./ui";
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <AuthProvider>
+      <ProfileProvider>
       <ConfigProvider>
       <CatalogProvider>
       <StoreProvider>
@@ -19,6 +21,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
       </StoreProvider>
       </CatalogProvider>
       </ConfigProvider>
+      </ProfileProvider>
     </AuthProvider>
   );
 }
