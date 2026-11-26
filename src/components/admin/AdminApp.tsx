@@ -1,10 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/lib/cloud/auth";
 import {
-  amIAdmin,
   loadConfigRows,
   loadOverview,
   loadRecent,
@@ -43,78 +41,30 @@ const EVENT_LABEL: Record<string, string> = {
 const shortDate = (iso: string) => new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric" });
 const when = (iso: string | null) => (iso ? new Date(iso).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "—");
 
-export function AdminApp() {
-  const { ready, user, configured } = useAuth();
-  const [allowed, setAllowed] = useState<boolean | null>(null);
+/** The admin area, shown as a tab inside the main app to admins only. */
+export default function AdminPanel() {
   const [section, setSection] = useState<Section>("overview");
-
-  useEffect(() => {
-    if (!user) return setAllowed(null);
-    amIAdmin()
-      .then(setAllowed)
-      .catch(() => setAllowed(false));
-  }, [user]);
-
-  if (!configured) return <Gate title="Admin needs Supabase">Accounts aren&apos;t configured on this deployment.</Gate>;
-  if (!ready) return <div className="min-h-dvh" />;
-  if (!user)
-    return (
-      <Gate title="Sign in to continue">
-        <Link href="/login" className="font-semibold text-saffron-ink underline">
-          Sign in
-        </Link>{" "}
-        with an admin account.
-      </Gate>
-    );
-  if (allowed === null) return <div className="min-h-dvh" />;
-  if (!allowed)
-    return (
-      <Gate title="You don't have admin access">
-        You&apos;re signed in as {user.email}. Ask an existing admin to grant access from Admin → Users.
-      </Gate>
-    );
-
+  const { user } = useAuth();
   return (
-    <div className="min-h-dvh">
-      <header className="sticky top-0 z-30 border-b border-line bg-bg/90 backdrop-blur">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-[max(16px,env(safe-area-inset-left))] py-3">
-          <div className="flex items-baseline gap-3">
-            <Link href="/" className="font-display text-2xl font-bold text-saffron">
-              Luka
-            </Link>
-            <span className="text-sm font-semibold text-muted">Admin</span>
-          </div>
-          <Segmented<Section>
-            value={section}
-            onChange={setSection}
-            options={[
-              { value: "overview", label: "Overview" },
-              { value: "users", label: "Users" },
-              { value: "issues", label: "Errors & feedback" },
-              { value: "settings", label: "Settings" },
-            ]}
-          />
-        </div>
-      </header>
-      <main className="mx-auto max-w-6xl px-[max(16px,env(safe-area-inset-left))] py-6 sm:py-8">
-        {section === "overview" && <OverviewSection />}
-        {section === "users" && <UsersSection me={user.id} />}
-        {section === "issues" && <IssuesSection />}
-        {section === "settings" && <SettingsSection />}
-      </main>
+    <div className="grid gap-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-[12px] font-semibold uppercase tracking-[0.1em] text-muted">Admin · only admins see this tab</p>
+        <Segmented<Section>
+          value={section}
+          onChange={setSection}
+          options={[
+            { value: "overview", label: "Overview" },
+            { value: "users", label: "Users" },
+            { value: "issues", label: "Errors & feedback" },
+            { value: "settings", label: "Settings" },
+          ]}
+        />
+      </div>
+      {section === "overview" && <OverviewSection />}
+      {section === "users" && <UsersSection me={user?.id ?? ""} />}
+      {section === "issues" && <IssuesSection />}
+      {section === "settings" && <SettingsSection />}
     </div>
-  );
-}
-
-function Gate({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <main className="mx-auto max-w-md px-[max(20px,env(safe-area-inset-left))] py-16">
-      <Link href="/" className="font-display text-3xl font-bold text-saffron">
-        Luka
-      </Link>
-      <h1 className="mt-8 font-display text-3xl font-semibold">{title}</h1>
-      <p className="mt-2 text-muted">{children}</p>
-    </main>
   );
 }
 

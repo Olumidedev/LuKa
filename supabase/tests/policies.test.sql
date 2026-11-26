@@ -84,4 +84,9 @@ do $$ begin
   end;
 end $$;
 reset role;
+-- Deleting accounts works even after they have saved (cascade + updated_by cleared).
+delete from auth.users where id = :'bob';
+do $$ begin assert (select count(*) from public.household_members) = 1, 'bob removed from household'; end $$;
+delete from auth.users where id = :'ada';
+do $$ begin assert (select count(*) from public.households) = 0, 'ada''s household removed with her'; end $$;
 \echo ALL POLICY TESTS PASSED

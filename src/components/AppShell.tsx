@@ -1,8 +1,10 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { trackOnce } from "@/lib/analytics";
 import { useConfig } from "@/lib/cloud/config";
+import { useIsAdmin } from "@/lib/cloud/useIsAdmin";
 import type { CookCard } from "@/lib/engine/cookcard";
 import { regenerate } from "@/lib/state/actions";
 import { useStore } from "@/lib/state/store";
@@ -18,6 +20,11 @@ import { PlanTab } from "./PlanTab";
 import { RecipesTab } from "./RecipesTab";
 import { UICtx, type MealRef, type Tab } from "./uiState";
 import { Button, Sheet, cx } from "./ui";
+
+// Loaded only when an admin opens the tab, so other people never download it.
+const AdminPanel = dynamic(() => import("./admin/AdminApp"), { ssr: false, loading: () => <p className="text-muted">Loading admin…</p> });
+
+const ADMIN_TAB = { key: "admin" as Tab, label: "Admin", icon: <path d="M12 3l8 3v6c0 4.5-3.4 8.3-8 9-4.6-.7-8-4.5-8-9V6l8-3zm-3 9l2 2 4-4" /> };
 
 const TABS: { key: Tab; label: string; icon: React.ReactNode }[] = [
   { key: "plan", label: "Plan", icon: <path d="M4 5h16M4 12h16M4 19h10" /> },
@@ -35,6 +42,11 @@ export function AppShell() {
   const [draft, setDraft] = useState<CuisinePick[]>([]);
   const config = useConfig();
   useEffect(() => trackOnce("app_opened"), []);
+  const isAdmin = useIsAdmin();
+  const tabs = isAdmin ? [...TABS, ADMIN_TAB] : TABS;
+  useEffect(() => {
+    if (!isAdmin && tab === "admin") setTab("plan");
+  }, [isAdmin, tab]);
 
   const openCuisines = useCallback(() => {
     setDraft(state.cuisines);
@@ -65,13 +77,13 @@ export function AppShell() {
     <UICtx.Provider value={ui}>
       <div className="min-h-dvh pb-24 sm:pb-10">
         <header className="sticky top-0 z-30 border-b border-line bg-bg/90 backdrop-blur">
-          <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-[max(16px,env(safe-area-inset-left))] py-3">
+          <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-[max(16px,env(safe-area-inset-left))] py-3">
             <button type="button" onClick={() => ui.setTab("plan")} className="font-display text-2xl font-bold text-saffron">
               Luka
             </button>
             <div className="flex items-center gap-3">
             <nav className="hidden gap-1 sm:flex" aria-label="Sections">
-              {TABS.map((t) => (
+              {tabs.map((t) => (
                 <button
                   key={t.key}
                   type="button"
@@ -93,15 +105,16 @@ export function AppShell() {
             {config.announcement.text}
           </div>
         )}
-        <main className="mx-auto max-w-5xl px-[max(16px,env(safe-area-inset-left))] py-6 sm:py-8">
+        <main className="mx-auto max-w-6xl px-[max(16px,env(safe-area-inset-left))] py-6 sm:py-8">
           {tab === "plan" && <PlanTab />}
           {tab === "groceries" && <GroceryTab />}
           {tab === "recipes" && <RecipesTab />}
           {tab === "household" && <HouseholdTab />}
+          {tab === "admin" && isAdmin && <AdminPanel />}
         </main>
 
-        <nav className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-4 border-t border-line bg-surface/95 pb-[env(safe-area-inset-bottom)] backdrop-blur sm:hidden" aria-label="Sections">
-          {TABS.map((t) => (
+        <nav style={{ gridTemplateColumns: `repeat(${tabs.length}, minmax(0, 1fr))` }} className="fixed inset-x-0 bottom-0 z-30 grid border-t border-line bg-surface/95 pb-[env(safe-area-inset-bottom)] backdrop-blur sm:hidden" aria-label="Sections">
+          {tabs.map((t) => (
             <button
               key={t.key}
               type="button"

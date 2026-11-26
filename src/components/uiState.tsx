@@ -4,7 +4,7 @@ import { createContext, useContext } from "react";
 import type { CookCard } from "@/lib/engine/cookcard";
 import type { MealType } from "@/lib/types";
 
-export type Tab = "plan" | "groceries" | "recipes" | "household";
+export type Tab = "plan" | "groceries" | "recipes" | "household" | "admin";
 
 export type MealRef = { kind: "slot"; day: number; meal: MealType } | { kind: "recipe"; recipeId: string };
 
