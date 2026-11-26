@@ -15,6 +15,7 @@
   --leaf-soft: #e4f0ea;
   --danger: #b42318;
   --danger-soft: #fdecea;
+  --chart: #d97706; /* validated vs light and dark surfaces (dataviz validator) */
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
@@ -50,6 +51,7 @@
   --color-leaf-soft: var(--leaf-soft);
   --color-danger: var(--danger);
   --color-danger-soft: var(--danger-soft);
+  --color-chart: var(--chart);
   --font-display: "Fraunces", Georgia, "Times New Roman", serif;
   --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
 }

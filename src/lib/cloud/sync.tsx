@@ -2,6 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useToast } from "@/components/ui";
+import { track } from "../analytics";
 import { useStore } from "../state/store";
 import type { AppState } from "../types";
 import { useAuth } from "./auth";
@@ -84,6 +85,7 @@ export function CloudSync({ children }: { children: React.ReactNode }) {
     }
     if (connectedFor.current === user.id) return;
     connectedFor.current = user.id;
+    track("signed_in", { provider: String(user.app_metadata?.provider ?? "email") });
     let live = true;
     (async () => {
       setStatus("connecting");

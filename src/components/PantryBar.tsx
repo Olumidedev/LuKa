@@ -3,12 +3,16 @@
 import { useRef, useState } from "react";
 import { useStore } from "@/lib/state/store";
 import { aiScanFridge, useAIEnabled } from "@/lib/ai/client";
+import { track } from "@/lib/analytics";
+import { useConfig } from "@/lib/cloud/config";
 import { Button, cx, inputCls, useToast } from "./ui";
 
 /** What's already at home: typed, ticked off the list, or read from a fridge photo. */
 export function PantryBar({ compact }: { compact?: boolean }) {
   const { state, ctx, update } = useStore();
-  const ai = useAIEnabled();
+  const aiOn = useAIEnabled();
+  const config = useConfig();
+  const ai = aiOn && config.features.fridge_scan;
   const toast = useToast();
   const [q, setQ] = useState("");
   const [busy, setBusy] = useState(false);
@@ -36,6 +40,7 @@ export function PantryBar({ compact }: { compact?: boolean }) {
     setBusy(true);
     try {
       const found = await aiScanFridge(f);
+      track("pantry_scanned", { items: found.length });
       update((d) => {
         for (const it of found) {
           const existing = d.pantry.find((p) => p.key === it.key);

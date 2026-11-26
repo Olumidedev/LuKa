@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { track } from "@/lib/analytics";
 import { useAuth } from "@/lib/cloud/auth";
+import { useConfig } from "@/lib/cloud/config";
 import { newMember } from "@/lib/state/defaults";
 import { regenerate } from "@/lib/state/actions";
 import { useStore } from "@/lib/state/store";
@@ -23,6 +25,8 @@ const STEPS = ["Who's eating", "Your cuisines", "Your plan"];
 export function Onboarding() {
   const { state, update } = useStore();
   const auth = useAuth();
+  const config = useConfig();
+  const planOptions = PLAN_OPTIONS.filter((o) => (o.value !== "instant" || config.features.instant) && (o.value !== "14day" || config.features.fourteen_day));
   const [step, setStep] = useState(0);
   const [members, setMembers] = useState(state.members.length ? state.members : [newMember()]);
   const [cuisines, setCuisines] = useState(state.cuisines);
@@ -36,6 +40,8 @@ export function Onboarding() {
       d.members = members;
       d.cuisines = cuisines;
       d.onboarded = true;
+      d.settings.takeoutPerPerson = config.defaults.takeout_per_person;
+      track("onboarding_done", { members: members.length, cuisines: cuisines.length, type: planType });
       regenerate(d, { type: planType, reshuffle: true });
     });
 
@@ -90,7 +96,7 @@ export function Onboarding() {
         {step === 1 && <CuisinePicker value={cuisines} onChange={setCuisines} extraRecipes={state.customRecipes} />}
         {step === 2 && (
           <div className="grid gap-3" role="radiogroup">
-            {PLAN_OPTIONS.map((o) => (
+            {planOptions.map((o) => (
               <button
                 key={o.value}
                 type="button"

@@ -52,21 +52,7 @@ export async function generateJSON(prompt: string, images: ImagePart[] = []): Pr
   }
 }
 
-/* ── Day-1 abuse controls: per-IP token bucket on the expensive endpoints. ── */
-const buckets = new Map<string, { tokens: number; at: number }>();
-export function rateLimit(ip: string, perMinute = 6): boolean {
-  const now = Date.now();
-  const b = buckets.get(ip) ?? { tokens: perMinute, at: now };
-  b.tokens = Math.min(perMinute, b.tokens + ((now - b.at) / 60_000) * perMinute);
-  b.at = now;
-  if (b.tokens < 1) {
-    buckets.set(ip, b);
-    return false;
-  }
-  b.tokens -= 1;
-  buckets.set(ip, b);
-  return true;
-}
+export { rateLimit } from "../server/ratelimit";
 
 /** Wraps untrusted text so instructions inside it are treated as data (indirect prompt-injection guard). */
 export function untrusted(label: string, text: string): string {

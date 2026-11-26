@@ -1,6 +1,7 @@
 import { buildContext } from "../engine/context";
 import { defaultStart } from "../engine/dates";
 import { buildPlan } from "../engine/planner";
+import { track } from "../analytics";
 import type { AppState, PlanType } from "../types";
 
 /** Rebuild the plan for the draft state. Keeps pins and skipped days unless the horizon changes. */
@@ -14,4 +15,5 @@ export function regenerate(draft: AppState, opts: { type?: PlanType; reshuffle?:
   const ctx = buildContext(draft);
   draft.plan = buildPlan(ctx, type, start, seed, prev && prev.start === start ? prev : null);
   draft.inCart = {};
+  track("plan_built", { type, reshuffle: !!opts.reshuffle, members: draft.members.length, cuisines: draft.cuisines.length });
 }

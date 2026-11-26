@@ -1,6 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { track } from "@/lib/analytics";
+import { useConfig } from "@/lib/cloud/config";
 import { buildCookCard, stepText } from "@/lib/engine/cookcard";
 import { dayLabel } from "@/lib/engine/dates";
 import { encodeHandoff } from "@/lib/engine/handoff";
@@ -19,6 +21,7 @@ export function MealSheet({ target, onClose }: { target: MealRef | null; onClose
   const ui = useUI();
   const toast = useToast();
   const [view, setView] = useState<"detail" | "swap" | "handoff">("detail");
+  const config = useConfig();
 
   const slot = target?.kind === "slot" ? state.plan?.days[target.day]?.meals[target.meal] : undefined;
   const recipeId = target?.kind === "recipe" ? target.recipeId : slot?.recipeId;
@@ -66,6 +69,7 @@ export function MealSheet({ target, onClose }: { target: MealRef | null; onClose
       assignCooks({ ...ctx, state: d }, d.plan);
     });
     setView("detail");
+    track("meal_swapped", { meal: target.kind === "slot" ? target.meal : "" });
     toast({ text: `Swapped in ${r.name} and pinned it. Your shopping list is updated.` });
   };
 
@@ -79,6 +83,7 @@ export function MealSheet({ target, onClose }: { target: MealRef | null; onClose
       s.pinned = true;
     });
     const url = handoffUrl(m?.name);
+    track("handoff_sent", { share: !!navigator.share });
     const text = `${m?.name ? `${m.name}, you're` : "You're"} cooking ${recipe.name}${when ? ` (${when})` : ""}. Everything you need is here:`;
     try {
       if (navigator.share) await navigator.share({ title: recipe.name, text, url });
@@ -100,7 +105,7 @@ export function MealSheet({ target, onClose }: { target: MealRef | null; onClose
         {target.kind === "slot" && (
           <>
             <Button onClick={() => setView("swap")}>Swap</Button>
-            {!leftover && <Button onClick={() => setView("handoff")}>Hand off</Button>}
+            {!leftover && config.features.handoff && <Button onClick={() => setView("handoff")}>Hand off</Button>}
             <Button
               variant="ghost"
               onClick={() =>

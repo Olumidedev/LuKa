@@ -4,6 +4,8 @@ import { useMemo, useState } from "react";
 import { ALL_COUNTRIES } from "@/lib/data/countries";
 import { aiGenerateRecipes, aiParseRecipe, useAIEnabled, type AIRecipes } from "@/lib/ai/client";
 import { normalizeRecipe, parseIngredientLine } from "@/lib/ai/normalize";
+import { track } from "@/lib/analytics";
+import { useConfig } from "@/lib/cloud/config";
 import { cuisineMatch } from "@/lib/engine/cuisine";
 import { gateRecipe } from "@/lib/engine/gate";
 import { MEAL_LABEL } from "@/lib/engine/planner";
@@ -15,7 +17,8 @@ import { Button, Chip, Label, Segmented, Sheet, Tag, cx, inputCls, useToast } fr
 export function RecipesTab() {
   const { state, ctx, update } = useStore();
   const ui = useUI();
-  const ai = useAIEnabled();
+  const config = useConfig();
+  const ai = useAIEnabled() && config.features.ai_recipes;
   const [q, setQ] = useState("");
   const [mine, setMine] = useState(true);
   const [meal, setMeal] = useState<MealType | "">("");
@@ -117,6 +120,7 @@ function useSaveRecipes() {
     });
     // Same deterministic gate as the library, applied to the new recipes.
     const ings = { ...ctx.ings, ...res.ingredients };
+    track("recipe_added", { source: res.recipes[0]?.source.type ?? "user", count: res.recipes.length });
     const blocked = res.recipes.map((r) => gateRecipe(r, state.members, ings)).filter((g) => !g.ok);
     toast({
       text: `Added ${res.recipes.length} recipe${res.recipes.length === 1 ? "" : "s"}.${
@@ -299,6 +303,7 @@ function GenerateSheet({ open, onClose, ai }: { open: boolean; onClose: () => vo
     setBusy(true);
     try {
       save(await aiGenerateRecipes(country, state.members));
+      track("ai_recipes_generated", { country });
       onClose();
     } catch (e) {
       setErr(e instanceof Error ? e.message : "That didn't work.");

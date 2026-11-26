@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import { track } from "@/lib/analytics";
 import { useAuth } from "@/lib/cloud/auth";
 import { useCloud, type SyncStatus } from "@/lib/cloud/sync";
 import { Button, cx, useToast } from "./ui";
@@ -43,6 +44,7 @@ export function AccountMenu() {
   const invite = async () => {
     try {
       const code = await cloud.invite();
+      track("invite_created");
       const url = `${window.location.origin}/join#${code}`;
       const text = `Join our household on Luka so we share the meal plan and shopping list:`;
       if (navigator.share) await navigator.share({ title: "Join our Luka household", text, url });

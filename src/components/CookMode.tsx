@@ -1,6 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { track } from "@/lib/analytics";
+import { useConfig } from "@/lib/cloud/config";
 import { stepText, type CookCard, type StepPart } from "@/lib/engine/cookcard";
 import { Button, cx } from "./ui";
 
@@ -74,6 +76,8 @@ export function CookMode({ card, onClose }: { card: CookCard; onClose: () => voi
   const [heard, setHeard] = useState("");
   const [showIngredients, setShowIngredients] = useState(false);
   const recRef = useRef<Recognition | null>(null);
+  const config = useConfig();
+  useEffect(() => track("cook_started", { steps: card.steps.length }), [card.steps.length]);
   const audio = useRef<AudioContext | null>(null);
   const stateRef = useRef({ step, speak });
   stateRef.current = { step, speak };
@@ -260,7 +264,7 @@ export function CookMode({ card, onClose }: { card: CookCard; onClose: () => voi
             Read aloud
           </button>
         )}
-        {SR ? (
+        {SR && config.features.voice ? (
           <button
             type="button"
             aria-pressed={listening}
@@ -361,7 +365,14 @@ export function CookMode({ card, onClose }: { card: CookCard; onClose: () => voi
         )}
         <div className="flex-1" />
         {isLast ? (
-          <Button size="lg" variant="leaf" onClick={onClose}>
+          <Button
+            size="lg"
+            variant="leaf"
+            onClick={() => {
+              track("cook_finished", { steps: card.steps.length, timers: timers.length, voice: listening });
+              onClose();
+            }}
+          >
             Finished
           </Button>
         ) : (

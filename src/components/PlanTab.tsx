@@ -7,6 +7,8 @@ import { dayLabel, mealForNow, toISO } from "@/lib/engine/dates";
 import { badges, perServing, BADGE_LABEL } from "@/lib/engine/nutrition";
 import { MEALS, MEAL_LABEL, prepTips, skipDay } from "@/lib/engine/planner";
 import { computeShopping, planEntries, weeklyTrip } from "@/lib/engine/shopping";
+import { track } from "@/lib/analytics";
+import { useConfig } from "@/lib/cloud/config";
 import { regenerate } from "@/lib/state/actions";
 import { useStore } from "@/lib/state/store";
 import type { MealType, PlanType } from "@/lib/types";
@@ -20,6 +22,10 @@ export function PlanTab() {
   const ui = useUI();
   const toast = useToast();
   const plan = state.plan;
+  const config = useConfig();
+  const options = PLAN_OPTIONS.filter(
+    (o) => o.value === state.planType || ((o.value !== "instant" || config.features.instant) && (o.value !== "14day" || config.features.fourteen_day)),
+  );
 
   const shopping = useMemo(() => (plan ? computeShopping(ctx, planEntries(ctx, plan), weeklyTrip) : []), [ctx, plan]);
   const tips = useMemo(() => (plan ? prepTips(ctx, plan) : new Map<string, string[]>()), [ctx, plan]);
@@ -30,7 +36,7 @@ export function PlanTab() {
 
   const header = (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-      <Segmented<PlanType> value={state.planType} onChange={setType} options={PLAN_OPTIONS.map((o) => ({ value: o.value, label: o.label }))} />
+      <Segmented<PlanType> value={state.planType} onChange={setType} options={options.map((o) => ({ value: o.value, label: o.label }))} />
       <div className="flex flex-wrap items-center gap-2 text-sm">
         <span className="text-muted">Cooking from</span>
         <button type="button" onClick={ui.openCuisines} className="rounded-full border border-line bg-surface px-3 py-1 font-semibold hover:border-muted">
@@ -80,6 +86,7 @@ export function PlanTab() {
 
   const doSkip = (i: number) => {
     const before = state;
+    track("day_skipped", { day: i });
     let dropped: string[] = [];
     update((d) => {
       const r = skipDay(d.plan!, i);

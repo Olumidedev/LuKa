@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { track, trackOnce } from "@/lib/analytics";
 import { AISLES } from "@/lib/data/ingredients";
 import { dayLabel } from "@/lib/engine/dates";
 import { MEAL_LABEL } from "@/lib/engine/planner";
@@ -74,6 +75,7 @@ export function GroceryTab() {
     }
     try {
       await navigator.clipboard.writeText(lines.join("\n"));
+      track("list_copied", { items: t.items.length, stores: state.stores.length });
       toast({ text: "List copied. Paste it anywhere." });
     } catch {
       toast({ text: "Couldn't copy. Your browser blocked the clipboard." });
@@ -132,7 +134,10 @@ export function GroceryTab() {
             </h2>
             <ul className="divide-y divide-line">
               {g.items.map((i) => (
-                <Row key={i.key} item={i} checked={!!state.inCart[cartKey(i.key)]} onCheck={(v) => update((d) => void (d.inCart[cartKey(i.key)] = v))} onHave={() => markHave(i.key)} dayName={dayName} showUses={!instant} recipeName={(id) => ctx.byId.get(id)?.name ?? ""} />
+                <Row key={i.key} item={i} checked={!!state.inCart[cartKey(i.key)]} onCheck={(v) => {
+                    if (v) trackOnce("item_in_cart");
+                    update((d) => void (d.inCart[cartKey(i.key)] = v));
+                  }} onHave={() => markHave(i.key)} dayName={dayName} showUses={!instant} recipeName={(id) => ctx.byId.get(id)?.name ?? ""} />
               ))}
             </ul>
           </section>
@@ -151,7 +156,10 @@ export function GroceryTab() {
           {showCupboard && (
             <ul className="divide-y divide-line border-t border-line">
               {cupboard.map((i) => (
-                <Row key={i.key} item={i} checked={!!state.inCart[cartKey(i.key)]} onCheck={(v) => update((d) => void (d.inCart[cartKey(i.key)] = v))} onHave={() => markHave(i.key)} dayName={dayName} showUses={false} recipeName={() => ""} />
+                <Row key={i.key} item={i} checked={!!state.inCart[cartKey(i.key)]} onCheck={(v) => {
+                    if (v) trackOnce("item_in_cart");
+                    update((d) => void (d.inCart[cartKey(i.key)] = v));
+                  }} onHave={() => markHave(i.key)} dayName={dayName} showUses={false} recipeName={() => ""} />
               ))}
             </ul>
           )}

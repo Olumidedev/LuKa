@@ -1,6 +1,8 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { trackOnce } from "@/lib/analytics";
+import { useConfig } from "@/lib/cloud/config";
 import type { CookCard } from "@/lib/engine/cookcard";
 import { regenerate } from "@/lib/state/actions";
 import { useStore } from "@/lib/state/store";
@@ -31,6 +33,8 @@ export function AppShell() {
   const [cook, setCook] = useState<CookCard | null>(null);
   const [cuisinesOpen, setCuisinesOpen] = useState(false);
   const [draft, setDraft] = useState<CuisinePick[]>([]);
+  const config = useConfig();
+  useEffect(() => trackOnce("app_opened"), []);
 
   const openCuisines = useCallback(() => {
     setDraft(state.cuisines);
@@ -84,6 +88,11 @@ export function AppShell() {
           </div>
         </header>
 
+        {config.announcement.text && (
+          <div role="status" className={cx("px-[max(16px,env(safe-area-inset-left))] py-2.5 text-center text-sm font-medium", config.announcement.tone === "warning" ? "bg-saffron-soft text-saffron-ink" : "bg-leaf-soft text-leaf")}>
+            {config.announcement.text}
+          </div>
+        )}
         <main className="mx-auto max-w-5xl px-[max(16px,env(safe-area-inset-left))] py-6 sm:py-8">
           {tab === "plan" && <PlanTab />}
           {tab === "groceries" && <GroceryTab />}

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui";
 import { useAuth } from "@/lib/cloud/auth";
+import { track } from "@/lib/analytics";
 import { joinHousehold } from "@/lib/cloud/households";
 import { useCloud } from "@/lib/cloud/sync";
 
@@ -39,6 +40,7 @@ export default function JoinPage() {
       } catch {
         /* ignore */
       }
+      track("household_joined");
       switchTo(hid);
       router.replace("/");
     } catch (e) {

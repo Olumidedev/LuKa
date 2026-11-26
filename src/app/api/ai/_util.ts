@@ -1,12 +1,11 @@
 import { NextResponse } from "next/server";
-import { AIError, rateLimit } from "@/lib/ai/gateway";
+import { AIError } from "@/lib/ai/gateway";
+import { clientIp, rateLimit } from "@/lib/server/ratelimit";
 
-export function clientIp(req: Request) {
-  return req.headers.get("x-forwarded-for")?.split(",")[0].trim() || "local";
-}
+export { clientIp };
 
 export function guard(req: Request): NextResponse | null {
-  if (!rateLimit(clientIp(req))) return NextResponse.json({ error: "Too many requests. Try again in a minute." }, { status: 429 });
+  if (!rateLimit(`ai:${clientIp(req)}`, 6)) return NextResponse.json({ error: "Too many requests. Try again in a minute." }, { status: 429 });
   return null;
 }
 
