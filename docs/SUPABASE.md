@@ -44,3 +44,10 @@ where id = (select id from auth.users where email = 'you@example.com');
 ```
 
 The `/admin` area (next milestone) checks this flag.
+
+## Knowledge base (migration 5)
+
+1. Run `supabase/migrations/20261126040000_knowledge_base.sql` in the SQL editor (safe to re-run).
+2. Load the seed: `npm run seed:load` (needs `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`), or paste `supabase/seed.sql`.
+3. Optional live syncs: `npm run sync -- prices`, `npm run sync -- nutrition hc_cnf`, `npm run sync -- nutrition usda_fdc` (needs `USDA_FDC_API_KEY`).
+4. Vercel runs `/api/cron/weekly-gap` (Mondays) and `/api/cron/sync-data` (monthly), authorised with `CRON_SECRET`.
