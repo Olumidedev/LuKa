@@ -21,7 +21,7 @@ npm run build     # production build
 Set `ANTHROPIC_API_KEY` (server-side) to turn on Claude:
 
 - **A growing menu:** when a cuisine someone picks has few recipes, Claude writes more. They're stored in a shared Supabase catalog (`supabase/migrations/20261126030000_recipe_catalog.sql`) so every household that cooks from that country benefits. Admins can hide or delete them, or generate more, under Admin → Recipes.
-- **Generate by country:** six home recipes for any of the 170 countries.
+- **Generate by country:** six home recipes for any of the 171 countries.
 - **Paste a recipe:** turns blog text or a family recipe into a LUKA recipe, with credit.
 - **Scan fridge photo:** marks what's already at home and what needs using soon.
 
@@ -36,7 +36,7 @@ Set `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` to turn on si
 | Area | Where |
 | --- | --- |
 | Ingredient catalogue (pack sizes, baseline prices, allergens, nutrition) | `src/lib/data/ingredients.ts` |
-| 170 countries in 18 regions, plus blends | `src/lib/data/countries.ts` |
+| 171 countries in 18 regions, plus blends | `src/lib/data/countries.ts` |
 | Recipe library (60 dishes, scalable steps with timers) | `src/lib/data/recipes.ts` |
 | Allergen, faith-rule and diet gate (no AI) | `src/lib/engine/gate.ts` |
 | Deterministic planner, swaps, skip-a-day, prep tips, instant meal | `src/lib/engine/planner.ts` |

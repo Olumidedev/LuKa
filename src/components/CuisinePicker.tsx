@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { BLENDS, REGIONS, pickLabel, samePick } from "@/lib/data/countries";
+import { ALL_COUNTRIES, BLENDS, REGIONS, pickLabel, samePick } from "@/lib/data/countries";
 import { LIBRARY } from "@/lib/data/recipes";
 import type { CuisinePick, Recipe } from "@/lib/types";
 import { Chip, cx, inputCls } from "./ui";
@@ -78,7 +78,7 @@ export function CuisinePicker({
       <input
         id="cuisine-search"
         className={inputCls}
-        placeholder="Search 170 countries, e.g. Ghana, Trinidad, Iran…"
+        placeholder={`Search ${ALL_COUNTRIES.length} countries, e.g. Ghana, Trinidad, Iran…`}
         value={q}
         onChange={(e) => setQ(e.target.value)}
       />
