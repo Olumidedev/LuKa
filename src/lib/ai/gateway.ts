@@ -26,7 +26,8 @@ export class AIError extends Error {
 }
 
 let client: Anthropic | null = null;
-function anthropic() {
+/** The shared Claude client (server only). */
+export function anthropic() {
   if (!process.env.ANTHROPIC_API_KEY) throw new AIError("AI features aren't configured on this server.", 503);
   client ??= new Anthropic({ timeout: 110_000, maxRetries: 1 });
   return client;
@@ -35,6 +36,24 @@ function anthropic() {
 export interface ImageInput {
   mediaType: "image/jpeg" | "image/png" | "image/webp";
   base64: string;
+}
+
+export const currentModel = () => process.env.ANTHROPIC_MODEL || DEFAULT_MODEL;
+
+/** Maps SDK errors to user-safe AIErrors (provider details stay in server logs). */
+export function toAIError(e: unknown): AIError {
+  if (e instanceof AIError) return e;
+  if (e instanceof Anthropic.RateLimitError) return new AIError("The AI service is busy. Try again in a minute.", 429);
+  if (e instanceof Anthropic.AuthenticationError) return new AIError("The AI key on the server isn't valid.", 503);
+  if (e instanceof Anthropic.BadRequestError) {
+    console.error("[ai] request rejected:", e.message);
+    return new AIError("AI is unavailable right now. Try again later.", 503);
+  }
+  if (e instanceof Anthropic.APIError) {
+    console.error("[ai] api error:", e.status, e.message);
+    return new AIError("The AI service had a problem. Try again shortly.", 502);
+  }
+  return new AIError("Couldn't reach the AI service.", 502);
 }
 
 export async function generateStructured<S extends z.ZodType>(opts: {

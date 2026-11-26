@@ -7,6 +7,7 @@ import { trackOnce } from "@/lib/analytics";
 import { useAuth } from "@/lib/cloud/auth";
 import { useConfig } from "@/lib/cloud/config";
 import { useCloud } from "@/lib/cloud/sync";
+import { useTasteSync } from "@/lib/cloud/taste";
 import { useAutoTopUp } from "@/lib/cloud/topup";
 import { useIsAdmin } from "@/lib/cloud/useIsAdmin";
 import type { CookCard } from "@/lib/engine/cookcard";
@@ -46,6 +47,7 @@ export function AppShell() {
   const { state, hydrated, update } = useStore();
   const auth = useAuth();
   const cloud = useCloud();
+  useTasteSync(cloud.household?.id);
   const router = useRouter();
   const config = useConfig();
   const isAdmin = useIsAdmin();

@@ -1,0 +1,110 @@
+[
+ {
+  "food_code": 1661,
+  "nutrient_value": 0.0,
+  "standard_error": 0,
+  "number_observation": 0,
+  "nutrient_name_id": 621,
+  "nutrient_web_name": "22:6n-3 (DHA)",
+  "nutrient_source_id": 0
+ },
+ {
+  "food_code": 1661,
+  "nutrient_value": 0.0,
+  "standard_error": 0,
+  "number_observation": 0,
+  "nutrient_name_id": 629,
+  "nutrient_web_name": "20:5n-3 (EPA)",
+  "nutrient_source_id": 0
+ },
+ {
+  "food_code": 1661,
+  "nutrient_value": 0.37,
+  "standard_error": 0,
+  "number_observation": 15,
+  "nutrient_name_id": 204,
+  "nutrient_web_name": "Total Fat",
+  "nutrient_source_id": 0
+ },
+ {
+  "food_code": 1661,
+  "nutrient_value": 0.6,
+  "standard_error": 0,
+  "number_observation": 3,
+  "nutrient_name_id": 303,
+  "nutrient_web_name": "Iron, Fe",
+  "nutrient_source_id": 0
+ },
+ {
+  "food_code": 1661,
+  "nutrient_value": 1.3,
+  "standard_error": 0,
+  "number_observation": 15,
+  "nutrient_name_id": 203,
+  "nutrient_web_name": "Protein",
+  "nutrient_source_id": 0
+ },
+ {
+  "food_code": 1661,
+  "nutrient_value": 2.3,
+  "standard_error": 0,
+  "number_observation": 0,
+  "nutrient_name_id": 291,
+  "nutrient_web_name": "Fibre, total dietary",
+  "nutrient_source_id": 0
+ },
+ {
+  "food_code": 1661,
+  "nutrient_value": 3.0,
+  "standard_error": 0,
+  "number_observation": 3,
+  "nutrient_name_id": 301,
+  "nutrient_web_name": "Calcium, Ca",
+  "nutrient_source_id": 0
+ },
+ {
+  "food_code": 1661,
+  "nutrient_value": 4.0,
+  "standard_error": 3,
+  "number_observation": 6,
+  "nutrient_name_id": 307,
+  "nutrient_web_name": "Sodium, Na",
+  "nutrient_source_id": 0
+ },
+ {
+  "food_code": 1661,
+  "nutrient_value": 22.0,
+  "standard_error": 1,
+  "number_observation": 6,
+  "nutrient_name_id": 417,
+  "nutrient_web_name": "Folacin, total",
+  "nutrient_source_id": 0
+ },
+ {
+  "food_code": 1661,
+  "nutrient_value": 22.0,
+  "standard_error": 1,
+  "number_observation": 6,
+  "nutrient_name_id": 806,
+  "nutrient_web_name": "Folate, naturally occurring",
+  "nutrient_source_id": 0
+ },
+ {
+  "food_code": 1661,
+  "nutrient_value": 31.89,
+  "standard_error": 0,
+  "number_observation": 0,
+  "nutrient_name_id": 205,
+  "nutrient_web_name": "Carbohydrate",
+  "nutrient_source_id": 0
+ },
+ {
+  "food_code": 1661,
+  "nutrient_value": 122.0,
+  "standard_error": 0,
+  "number_observation": 0,
+  "nutrient_name_id": 208,
+  "nutrient_web_name": "Energy (kcal)",
+  "nutrient_source_id": 0
+ }
+]

@@ -1,0 +1,7 @@
+"REF_DATE","GEO","DGUID","Products","UOM","UOM_ID","SCALAR_FACTOR","SCALAR_ID","VECTOR","COORDINATE","VALUE","STATUS","SYMBOL","TERMINATED","DECIMALS"
+"2026-09","Canada","2021A000011124","Eggs, 1 dozen","Dollars","81","units","0","v1353834290","11.20","4.83","","","","2"
+"2026-09","Canada","2021A000011124","Lemons, unit","Dollars","81","units","0","v1353834296","11.26","1.04","","","","2"
+"2026-09","Canada","2021A000011124","Tomatoes, per kilogram","Dollars","81","units","0","v1353834301","11.31","4.71","","","","2"
+"2026-09","Canada","2021A000011124","White rice, 2 kilograms","Dollars","81","units","0","v1458869937","11.94","9.35","","","","2"
+"2026-09","Canada","2021A000011124","Tofu, 350 grams ","Dollars","81","units","0","v1458869936","11.102","2.77","","","","2"
+"2026-09","Ontario","2021A000235","Tomatoes, per kilogram","Dollars","81","units","0","v1159447205","6.31","4.43","","","","2"

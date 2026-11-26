@@ -1,0 +1,307 @@
+{
+ "fdcId": 168215,
+ "description": "Plantains, green, raw",
+ "publicationDate": "4/1/2019",
+ "foodNutrients": [
+  {
+   "type": "FoodNutrient",
+   "nutrient": {
+    "id": 1008,
+    "number": "208",
+    "name": "Energy",
+    "rank": 300,
+    "unitName": "kcal"
+   },
+   "foodNutrientDerivation": {
+    "id": 49,
+    "code": "NC",
+    "description": "Calculated",
+    "foodNutrientSource": {
+     "id": 2,
+     "code": "4",
+     "description": "Calculated or imputed"
+    }
+   },
+   "id": 1338856,
+   "amount": 152.0,
+   "dataPoints": 0
+  },
+  {
+   "type": "FoodNutrient",
+   "nutrient": {
+    "id": 1003,
+    "number": "203",
+    "name": "Protein",
+    "rank": 600,
+    "unitName": "g"
+   },
+   "foodNutrientDerivation": {
+    "id": 1,
+    "code": "A",
+    "description": "Analytical",
+    "foodNutrientSource": {
+     "id": 1,
+     "code": "1",
+     "description": "Analytical or derived from analytical"
+    }
+   },
+   "id": 1338901,
+   "amount": 1.25,
+   "dataPoints": 1
+  },
+  {
+   "type": "FoodNutrient",
+   "nutrient": {
+    "id": 1004,
+    "number": "204",
+    "name": "Total lipid (fat)",
+    "rank": 800,
+    "unitName": "g"
+   },
+   "foodNutrientDerivation": {
+    "id": 1,
+    "code": "A",
+    "description": "Analytical",
+    "foodNutrientSource": {
+     "id": 1,
+     "code": "1",
+     "description": "Analytical or derived from analytical"
+    }
+   },
+   "id": 1338854,
+   "amount": 0.07,
+   "dataPoints": 1
+  },
+  {
+   "type": "FoodNutrient",
+   "nutrient": {
+    "id": 1005,
+    "number": "205",
+    "name": "Carbohydrate, by difference",
+    "rank": 1110,
+    "unitName": "g"
+   },
+   "foodNutrientDerivation": {
+    "id": 49,
+    "code": "NC",
+    "description": "Calculated",
+    "foodNutrientSource": {
+     "id": 2,
+     "code": "4",
+     "description": "Calculated or imputed"
+    }
+   },
+   "id": 1338855,
+   "amount": 36.66,
+   "dataPoints": 0
+  },
+  {
+   "type": "FoodNutrient",
+   "nutrient": {
+    "id": 1079,
+    "number": "291",
+    "name": "Fiber, total dietary",
+    "rank": 1200,
+    "unitName": "g"
+   },
+   "foodNutrientDerivation": {
+    "id": 1,
+    "code": "A",
+    "description": "Analytical",
+    "foodNutrientSource": {
+     "id": 1,
+     "code": "1",
+     "description": "Analytical or derived from analytical"
+    }
+   },
+   "id": 1338908,
+   "amount": 2.2,
+   "dataPoints": 1
+  },
+  {
+   "type": "FoodNutrient",
+   "nutrient": {
+    "id": 1087,
+    "number": "301",
+    "name": "Calcium, Ca",
+    "rank": 5300,
+    "unitName": "mg"
+   },
+   "foodNutrientDerivation": {
+    "id": 1,
+    "code": "A",
+    "description": "Analytical",
+    "foodNutrientSource": {
+     "id": 1,
+     "code": "1",
+     "description": "Analytical or derived from analytical"
+    }
+   },
+   "id": 1338862,
+   "amount": 2.0,
+   "dataPoints": 1
+  },
+  {
+   "type": "FoodNutrient",
+   "nutrient": {
+    "id": 1089,
+    "number": "303",
+    "name": "Iron, Fe",
+    "rank": 5400,
+    "unitName": "mg"
+   },
+   "foodNutrientDerivation": {
+    "id": 1,
+    "code": "A",
+    "description": "Analytical",
+    "foodNutrientSource": {
+     "id": 1,
+     "code": "1",
+     "description": "Analytical or derived from analytical"
+    }
+   },
+   "id": 1338909,
+   "amount": 0.75,
+   "dataPoints": 1
+  },
+  {
+   "type": "FoodNutrient",
+   "nutrient": {
+    "id": 1093,
+    "number": "307",
+    "name": "Sodium, Na",
+    "rank": 5800,
+    "unitName": "mg"
+   },
+   "foodNutrientDerivation": {
+    "id": 1,
+    "code": "A",
+    "description": "Analytical",
+    "foodNutrientSource": {
+     "id": 1,
+     "code": "1",
+     "description": "Analytical or derived from analytical"
+    }
+   },
+   "id": 1338912,
+   "amount": 2.0,
+   "dataPoints": 1
+  },
+  {
+   "type": "FoodNutrient",
+   "nutrient": {
+    "id": 1177,
+    "number": "417",
+    "name": "Folate, total",
+    "rank": 6900,
+    "unitName": "\u00b5g"
+   },
+   "foodNutrientDerivation": {
+    "id": 1,
+    "code": "A",
+    "description": "Analytical",
+    "foodNutrientSource": {
+     "id": 1,
+     "code": "1",
+     "description": "Analytical or derived from analytical"
+    }
+   },
+   "id": 1338918,
+   "amount": 28.0,
+   "dataPoints": 1
+  },
+  {
+   "type": "FoodNutrient",
+   "nutrient": {
+    "id": 1258,
+    "number": "606",
+    "name": "Fatty acids, total saturated",
+    "rank": 9700,
+    "unitName": "g"
+   },
+   "foodNutrientDerivation": {
+    "id": 49,
+    "code": "NC",
+    "description": "Calculated",
+    "foodNutrientSource": {
+     "id": 2,
+     "code": "4",
+     "description": "Calculated or imputed"
+    }
+   },
+   "id": 1338921,
+   "amount": 0.121,
+   "dataPoints": 0
+  },
+  {
+   "type": "FoodNutrient",
+   "nutrient": {
+    "id": 1404,
+    "number": "851",
+    "name": "PUFA 18:3 n-3 c,c,c (ALA)",
+    "rank": 14000,
+    "unitName": "g"
+   },
+   "foodNutrientDerivation": {
+    "id": 1,
+    "code": "A",
+    "description": "Analytical",
+    "foodNutrientSource": {
+     "id": 1,
+     "code": "1",
+     "description": "Analytical or derived from analytical"
+    }
+   },
+   "id": 1338934,
+   "amount": 0.006,
+   "dataPoints": 1
+  },
+  {
+   "type": "FoodNutrient",
+   "nutrient": {
+    "id": 1278,
+    "number": "629",
+    "name": "PUFA 20:5 n-3 (EPA)",
+    "rank": 15000,
+    "unitName": "g"
+   },
+   "foodNutrientDerivation": {
+    "id": 1,
+    "code": "A",
+    "description": "Analytical",
+    "foodNutrientSource": {
+     "id": 1,
+     "code": "1",
+     "description": "Analytical or derived from analytical"
+    }
+   },
+   "id": 1338929,
+   "amount": 0.0,
+   "dataPoints": 1
+  },
+  {
+   "type": "FoodNutrient",
+   "nutrient": {
+    "id": 1272,
+    "number": "621",
+    "name": "PUFA 22:6 n-3 (DHA)",
+    "rank": 15300,
+    "unitName": "g"
+   },
+   "foodNutrientDerivation": {
+    "id": 1,
+    "code": "A",
+    "description": "Analytical",
+    "foodNutrientSource": {
+     "id": 1,
+     "code": "1",
+     "description": "Analytical or derived from analytical"
+    }
+   },
+   "id": 1338925,
+   "amount": 0.0,
+   "dataPoints": 1
+  }
+ ],
+ "dataType": "SR Legacy"
+}

@@ -6,6 +6,7 @@ import { normalizeRecipe } from "@/lib/ai/normalize";
 import { SYSTEM, generatePrompt } from "@/lib/ai/prompts";
 import { RecipeBatchOut } from "@/lib/ai/schemas";
 import { isDeviceId } from "@/lib/analyticsSchema";
+import { publishRecipeToKB } from "@/lib/kb/publish";
 import { supabaseAdmin } from "@/lib/server/supabaseAdmin";
 import type { Ingredient, Recipe } from "@/lib/types";
 import { fail, guard } from "../_util";
@@ -39,8 +40,8 @@ export async function POST(req: Request) {
       if ((used ?? 0) >= DAILY_LIMIT) return NextResponse.json({ error: "You've reached today's limit for new AI recipes. Try again tomorrow." }, { status: 429 });
     }
 
-    const { data: existing } = await db.from("recipes").select("name").contains("countries", [country]).limit(200);
-    const avoid = [...LIBRARY.filter((r) => r.countries.includes(country)).map((r) => r.name), ...(existing ?? []).map((r) => r.name as string)];
+    const { data: existing } = await db.from("recipes").select("title").contains("cuisine_tags", [country]).limit(200);
+    const avoid = [...LIBRARY.filter((r) => r.countries.includes(country)).map((r) => r.name), ...(existing ?? []).map((r) => r.title as string)];
 
     const out = await generateStructured({
       schema: RecipeBatchOut,
@@ -58,17 +59,12 @@ export async function POST(req: Request) {
       seen.add(n.recipe.name.toLowerCase());
       recipes.push(n.recipe);
       Object.assign(ingredients, n.ingredients);
-      const { error } = await db.from("recipes").insert({
-        id: n.recipe.id,
-        name: n.recipe.name,
-        countries: n.recipe.countries,
-        meals: n.recipe.meals,
-        recipe: n.recipe,
-        ingredients: n.ingredients,
-        source: g.user.isAdmin ? "admin" : "ai",
-        created_by: g.user.id,
-      });
-      if (error) console.error("[ai/recipes] insert failed:", error.message);
+      try {
+        // Live straight away as `unverified` (lower planner weight); admins verify or hide it.
+        await publishRecipeToKB(db, n.recipe, n.ingredients, { originType: "claude", verification: "unverified", userId: g.user.id });
+      } catch (err) {
+        console.error("[ai/recipes] publish failed:", err instanceof Error ? err.message : err);
+      }
     }
 
     await db.from("usage_events").insert({

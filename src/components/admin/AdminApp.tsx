@@ -486,18 +486,21 @@ function SettingsSection() {
 /* ── Recipes (shared catalog) ────────────────────────── */
 interface CatalogRow {
   id: string;
-  name: string;
-  countries: string[];
+  title: string;
+  cuisine_tags: string[];
   meals: string[];
   status: "live" | "hidden";
-  source: string;
+  origin_type: string;
+  verification_status: "unverified" | "source_verified" | "curated";
+  avg_rating: number | null;
+  rating_count: number;
   created_at: string;
 }
 
 async function loadCatalogRows(): Promise<CatalogRow[]> {
   const { data, error } = await getSupabase()!
     .from("recipes")
-    .select("id, name, countries, meals, status, source, created_at")
+    .select("id, title, cuisine_tags, meals, status, origin_type, verification_status, avg_rating, rating_count, created_at")
     .order("created_at", { ascending: false })
     .limit(1000);
   if (error) throw new Error(error.message);
@@ -513,10 +516,10 @@ function RecipesSection() {
   const [country, setCountry] = useState("");
   const [busy, setBusy] = useState(false);
   const [confirm, setConfirm] = useState<string | null>(null);
-  const rows = (data ?? []).filter((r) => !q || `${r.name} ${r.countries.join(" ")}`.toLowerCase().includes(q.toLowerCase()));
+  const rows = (data ?? []).filter((r) => !q || `${r.title} ${r.cuisine_tags.join(" ")}`.toLowerCase().includes(q.toLowerCase()));
   const byCountry = useMemo(() => {
     const m = new Map<string, number>();
-    for (const r of data ?? []) if (r.status === "live") for (const c of r.countries) m.set(c, (m.get(c) ?? 0) + 1);
+    for (const r of data ?? []) if (r.status === "live") for (const c of r.cuisine_tags) m.set(c, (m.get(c) ?? 0) + 1);
     return [...m].sort((a, b) => b[1] - a[1]);
   }, [data]);
 
@@ -529,14 +532,20 @@ function RecipesSection() {
   const setStatus = async (r: CatalogRow, status: "live" | "hidden") => {
     const { error } = await getSupabase()!.from("recipes").update({ status }).eq("id", r.id);
     if (error) return toast({ text: error.message });
-    await after(status === "hidden" ? `${r.name} is hidden from everyone.` : `${r.name} is live again.`);
+    await after(status === "hidden" ? `${r.title} is hidden from everyone.` : `${r.title} is live again.`);
+  };
+
+  const verify = async (r: CatalogRow) => {
+    const { error } = await getSupabase()!.from("recipes").update({ verification_status: "curated" }).eq("id", r.id);
+    if (error) return toast({ text: error.message });
+    await after(`${r.title} is verified.`);
   };
 
   const remove = async (r: CatalogRow) => {
     const { error } = await getSupabase()!.from("recipes").delete().eq("id", r.id);
     setConfirm(null);
     if (error) return toast({ text: error.message });
-    await after(`Deleted ${r.name}.`);
+    await after(`Deleted ${r.title}.`);
   };
 
   const generate = async () => {
@@ -557,7 +566,7 @@ function RecipesSection() {
       <div>
         <h1 className="font-display text-3xl font-semibold">Recipes</h1>
         <p className="text-sm text-muted">
-          The shared catalog Claude writes into. Hidden recipes disappear from everyone&apos;s plans the next time they open LUKA. The 60 built-in recipes aren&apos;t listed here.
+          The shared catalog Claude writes into. Hidden recipes disappear from everyone&apos;s plans the next time they open LUKA. Unverified recipes are planned less often until someone checks them.
         </p>
       </div>
 
@@ -592,12 +601,14 @@ function RecipesSection() {
           <li key={r.id} className="flex flex-wrap items-center gap-3 px-4 py-3">
             <div className="min-w-0 flex-1">
               <p className="flex flex-wrap items-center gap-2">
-                <span className={cx("font-semibold", r.status === "hidden" && "text-muted line-through")}>{r.name}</span>
+                <span className={cx("font-semibold", r.status === "hidden" && "text-muted line-through")}>{r.title}</span>
                 {r.status === "hidden" && <Tag tone="danger">Hidden</Tag>}
-                {r.source === "admin" && <Tag>Admin</Tag>}
+                <Tag>{({ built_in: "Built-in", claude: "Claude", user: "Family", partner: "Partner" } as Record<string, string>)[r.origin_type] ?? r.origin_type}</Tag>
+                {r.verification_status === "unverified" ? <Tag tone="danger">Unverified</Tag> : <Tag>{r.verification_status === "curated" ? "Curated" : "Source-verified"}</Tag>}
+                {r.rating_count > 0 && <span className="text-[13px] text-muted">★ {Number(r.avg_rating).toFixed(1)} ({r.rating_count})</span>}
               </p>
               <p className="text-[13px] text-muted">
-                {r.countries.join(" × ")} · {r.meals.map((m) => ({ b: "Breakfast", l: "Lunch", d: "Dinner" })[m] ?? m).join(", ")} · added {shortDate(r.created_at)}
+                {r.cuisine_tags.join(" × ")} · {r.meals.map((m) => ({ b: "Breakfast", l: "Lunch", d: "Dinner" })[m] ?? m).join(", ")} · added {shortDate(r.created_at)}
               </p>
             </div>
             {confirm === r.id ? (
@@ -611,6 +622,11 @@ function RecipesSection() {
               </span>
             ) : (
               <span className="flex gap-2">
+                {r.verification_status === "unverified" && (
+                  <Button size="sm" onClick={() => verify(r)}>
+                    Verify
+                  </Button>
+                )}
                 <Button size="sm" onClick={() => setStatus(r, r.status === "live" ? "hidden" : "live")}>
                   {r.status === "live" ? "Hide" : "Show"}
                 </Button>

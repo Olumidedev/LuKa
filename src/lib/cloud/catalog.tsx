@@ -17,13 +17,17 @@ interface CatalogCtx extends Catalog {
 const Ctx = createContext<CatalogCtx>({ recipes: [], ingredients: {}, version: 0, refresh: async () => {} });
 export const useCatalog = () => useContext(Ctx);
 
-function fromRows(rows: { recipe: Recipe; ingredients: Record<string, Ingredient> }[]): Catalog {
+function fromRows(rows: { recipe: Recipe; app_ingredients: Record<string, Ingredient>; verification_status?: Recipe["verification"]; avg_rating?: number | null; rating_count?: number }[]): Catalog {
   const recipes: Recipe[] = [];
   const ingredients: Record<string, Ingredient> = {};
   for (const r of rows) {
     if (!r.recipe?.id || !Array.isArray(r.recipe.ingredients)) continue;
-    recipes.push(r.recipe);
-    Object.assign(ingredients, r.ingredients ?? {});
+    recipes.push({
+      ...r.recipe,
+      verification: r.verification_status ?? r.recipe.verification,
+      rating: r.rating_count ? { avg: Number(r.avg_rating), count: r.rating_count } : r.recipe.rating,
+    });
+    Object.assign(ingredients, r.app_ingredients ?? {});
   }
   return { recipes, ingredients };
 }
@@ -41,7 +45,7 @@ export function CatalogProvider({ children }: { children: React.ReactNode }) {
   const refresh = useCallback(async () => {
     const sb = getSupabase();
     if (!sb) return;
-    const { data, error } = await sb.from("recipes").select("recipe, ingredients").eq("status", "live").order("created_at", { ascending: false }).limit(MAX);
+    const { data, error } = await sb.from("recipes").select("recipe, app_ingredients, verification_status, avg_rating, rating_count").eq("status", "live").order("created_at", { ascending: false }).limit(MAX);
     if (error || !data) return;
     const c = fromRows(data as never);
     apply(c);

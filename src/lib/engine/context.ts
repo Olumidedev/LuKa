@@ -16,8 +16,9 @@ export interface EngineContext {
 
 export function buildContext(state: AppState, catalog: Catalog = getCatalog()): EngineContext {
   const ings = { ...INGREDIENTS, ...catalog.ingredients, ...state.customIngredients };
+  // Household recipes first, then the shared catalog (carries ratings/verification), then the bundled library.
   const seen = new Set<string>();
-  const recipes = [...LIBRARY, ...catalog.recipes, ...state.customRecipes].filter((r) => !seen.has(r.id) && seen.add(r.id));
+  const recipes = [...state.customRecipes, ...catalog.recipes, ...LIBRARY].filter((r) => !seen.has(r.id) && seen.add(r.id));
   const byId = new Map(recipes.map((r) => [r.id, r]));
   const gates = new Map(recipes.map((r) => [r.id, gateRecipe(r, state.members, ings)]));
   return { state, ings, recipes, byId, gates, portions: householdPortions(state.members) };

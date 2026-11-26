@@ -1,3 +1,4 @@
+import { getTaste, type Taste } from "../state/catalogRegistry";
 import type { MealType, Plan, PlanDay, Recipe, Slot } from "../types";
 import type { EngineContext } from "./context";
 import { cuisineMatch } from "./cuisine";
@@ -43,6 +44,22 @@ interface Candidate {
   needs: Need[];
   badges: string[];
   dislikeHits: number;
+}
+
+/**
+ * Knowledge-base signals: unverified recipes are planned a little less often,
+ * well-rated ones a little more, and the household's learned taste (from Cook
+ * Mode feedback) nudges cuisines and ingredients it keeps enjoying.
+ */
+export function trustBonus(recipe: Recipe, taste: Taste): number {
+  let s = 0;
+  if (recipe.verification === "unverified") s -= 0.8;
+  if (recipe.rating && recipe.rating.count > 0) s += (recipe.rating.avg - 3) * 0.4 * Math.min(1, recipe.rating.count / 5);
+  const cw = recipe.countries.map((c) => taste.cuisines[c]).filter((w) => w != null);
+  if (cw.length) s += 2 * (Math.max(...cw) - 1);
+  const iw = recipe.ingredients.map((i) => taste.ingredients[i.key]).filter((w) => w != null);
+  if (iw.length) s += iw.reduce((a, w) => a + (w - 1), 0);
+  return Math.max(-3, Math.min(3, s));
 }
 
 export function candidatesFor(ctx: EngineContext, meal: MealType): Candidate[] {
@@ -97,6 +114,7 @@ export function buildPlan(ctx: EngineContext, type: "5day" | "14day", start: str
   const focus = householdFocus(members);
   const useSoon = new Map(pantry.filter((p) => p.useWithinDays != null).map((p) => [p.key, p.useWithinDays!]));
 
+  const taste = getTaste();
   const score = (c: Candidate, day: number, meal: MealType) => {
     const trip = weeklyTrip(day);
     let s = c.match * 2 + rng() * 2.5;
@@ -125,6 +143,7 @@ export function buildPlan(ctx: EngineContext, type: "5day" | "14day", start: str
     }
     for (const b of c.badges) if (focus.has(b as never)) s += 1.2;
     s -= 5 * c.dislikeHits;
+    s += trustBonus(c.recipe, taste);
     return s;
   };
 

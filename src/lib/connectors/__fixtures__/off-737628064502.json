@@ -1,0 +1,19 @@
+{
+ "code": "0737628064502",
+ "product": {
+  "allergens_tags": [
+   "en:peanuts",
+   "en:sesame-seeds",
+   "en:soybeans"
+  ],
+  "product_name": "Thai peanut noodle kit includes stir-fry rice noodles & thai peanut seasoning",
+  "product_quantity": 155,
+  "product_quantity_unit": "g",
+  "quantity": "155 g",
+  "traces_tags": [
+   "en:peanuts"
+  ]
+ },
+ "status": 1,
+ "status_verbose": "product found"
+}
