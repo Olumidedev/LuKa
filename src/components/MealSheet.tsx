@@ -13,7 +13,9 @@ import { isPerishable } from "@/lib/engine/shopping";
 import { useStore } from "@/lib/state/store";
 import type { Recipe } from "@/lib/types";
 import { useUI, type MealRef } from "./uiState";
+import { cuisineTags } from "@/lib/data/specialty";
 import { PaletteExpansionCard, SimilarDishesStrip } from "./kb/Discover";
+import { NearbySheet, type NearbyQuery } from "./kb/NearbySheet";
 import { Button, Sheet, Tag, money, useToast } from "./ui";
 
 const TAKEOUT_MARKUP = 1.28; // delivery fee + service + tax + tip, flat and stated
@@ -25,6 +27,7 @@ export function MealSheet({ target, onClose }: { target: MealRef | null; onClose
   const [view, setView] = useState<"detail" | "swap" | "handoff">("detail");
   const config = useConfig();
   const cloud = useCloud();
+  const [nearby, setNearby] = useState<NearbyQuery | null>(null);
 
   const slot = target?.kind === "slot" ? state.plan?.days[target.day]?.meals[target.meal] : undefined;
   const recipeId = target?.kind === "recipe" ? target.recipeId : slot?.recipeId;
@@ -183,6 +186,21 @@ export function MealSheet({ target, onClose }: { target: MealRef | null; onClose
                 <p className="text-[13px] text-muted">
                   ${state.settings.takeoutPerPerson}/person + 28% fees, tax &amp; tip (estimate)
                 </p>
+                <button
+                  type="button"
+                  className="mt-2 text-[13px] font-semibold text-[#065F46] underline dark:text-leaf"
+                  onClick={() =>
+                    setNearby({
+                      want: "restaurants",
+                      title: `${recipe.countries.join(" & ")} food near you`,
+                      mapsQuery: `${recipe.countries[0]} restaurant`,
+                      cuisines: cuisineTags(recipe.countries.map((c) => ({ type: "country" as const, value: c }))),
+                      cuisineNames: recipe.countries,
+                    })
+                  }
+                >
+                  Find {recipe.countries[0]} restaurants nearby
+                </button>
               </div>
               {fresh.length > 0 && target.kind === "slot" && (
                 <p className="text-[13px] text-muted sm:col-span-2">
@@ -255,6 +273,7 @@ export function MealSheet({ target, onClose }: { target: MealRef | null; onClose
         </div>
       )}
 
+      <NearbySheet query={nearby} onClose={() => setNearby(null)} />
       {view === "swap" && target.kind === "slot" && state.plan && (
         <ul className="grid gap-2">
           {alternatives(ctx, state.plan, target.day, target.meal).map((a) => (

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { aiConfigured } from "@/lib/ai/gateway";
-import { askSousChef, type ChatTurn } from "@/lib/kb/sousChef";
+import { askWithFallback, chatConfigured } from "@/lib/kb/chatChain";
+import type { ChatTurn } from "@/lib/kb/sousChef";
 import { requireUser } from "@/lib/server/auth";
 import { clientIp, rateLimit } from "@/lib/server/ratelimit";
 import { supabaseAdmin } from "@/lib/server/supabaseAdmin";
@@ -14,7 +14,7 @@ export async function POST(req: Request) {
   const user = await requireUser(req);
   if (!user) return NextResponse.json({ error: "Sign in to ask LUKA." }, { status: 401 });
   const db = supabaseAdmin();
-  if (!db || !aiConfigured()) return NextResponse.json({ error: "Ask LUKA isn't switched on yet." }, { status: 503 });
+  if (!db || !chatConfigured()) return NextResponse.json({ error: "Ask LUKA isn't switched on yet." }, { status: 503 });
 
   const body = (await req.json().catch(() => ({}))) as { messages?: ChatTurn[]; householdId?: string };
   const turns = (Array.isArray(body.messages) ? body.messages : [])
@@ -37,9 +37,9 @@ export async function POST(req: Request) {
   }
 
   try {
-    const out = await askSousChef(db, { householdId, regionCode: hh?.region_code ?? "CA", allergenExclusions: hh?.allergen_exclusions ?? [], dietaryRestrictions: hh?.dietary_restrictions ?? [] }, turns);
-    await db.from("usage_events").insert({ device_id: crypto.randomUUID(), user_id: user.id, name: "souschef_asked", props: { tools: out.toolsUsed.length }, path: "/api/souschef" });
-    return NextResponse.json(out);
+    const out = await askWithFallback(db, { householdId, regionCode: hh?.region_code ?? "CA", allergenExclusions: hh?.allergen_exclusions ?? [], dietaryRestrictions: hh?.dietary_restrictions ?? [] }, turns);
+    await db.from("usage_events").insert({ device_id: crypto.randomUUID(), user_id: user.id, name: "souschef_asked", props: { tools: out.toolsUsed.length, provider: out.provider, fallbacks: out.skipped.length }, path: "/api/souschef" });
+    return NextResponse.json({ text: out.text, provider: out.provider });
   } catch (e) {
     const status = (e as { status?: number }).status ?? 502;
     return NextResponse.json({ error: e instanceof Error ? e.message : "Something went wrong." }, { status });

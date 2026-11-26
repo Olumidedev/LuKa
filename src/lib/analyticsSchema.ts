@@ -21,6 +21,8 @@ export const EVENT_NAMES = [
   "cook_feedback",
   "souschef_asked",
   "recipe_shared",
+  "nearby_searched",
+  "instacart_opened",
 ] as const;
 
 export type EventName = (typeof EVENT_NAMES)[number];

@@ -20,7 +20,7 @@ export interface ChatTurn {
   content: string;
 }
 
-const TOOLS: Anthropic.Beta.BetaTool[] = [
+export const TOOLS: Anthropic.Beta.BetaTool[] = [
   {
     name: "lookup_ingredient_facts",
     description:
@@ -61,7 +61,7 @@ async function allergenUnsafe(db: SupabaseClient, recipeIds: string[], excl: str
   return new Set([...(ri ?? []).filter((r) => badIngs.has(r.ingredient_id as string)).map((r) => r.recipe_id as string), ...recipeIds.filter((id) => !withIngs.has(id))]);
 }
 
-async function runTool(db: SupabaseClient, ctx: SousChefContext, name: string, input: Record<string, unknown>): Promise<unknown> {
+export async function runTool(db: SupabaseClient, ctx: SousChefContext, name: string, input: Record<string, unknown>): Promise<unknown> {
   if (name === "lookup_ingredient_facts") {
     const { data: m } = await db.rpc("resolve_ingredient_names", { p_names: [String(input.name ?? "").slice(0, 80)], p_min_score: 0.5 });
     const hit = (m as { ingredient_id: string | null; matched_name: string; score: number }[])?.[0];
@@ -128,7 +128,7 @@ async function runTool(db: SupabaseClient, ctx: SousChefContext, name: string, i
   throw new Error(`Unknown tool ${name}`);
 }
 
-const SYSTEM = (ctx: SousChefContext) => `You are LUKA, a calm, culturally fluent sous-chef helping one household cook at home. Be encouraging, precise and non-judgmental: never scold anyone for skipping a meal or ordering takeout. Respect each dish's own name and tradition; when you relate dishes across cultures (Dodo, Jamaican fried ripe plantain, Pazham Pori), present them as peers, never as one generic dish.
+export const SYSTEM = (ctx: SousChefContext) => `You are LUKA, a calm, culturally fluent sous-chef helping one household cook at home. Be encouraging, precise and non-judgmental: never scold anyone for skipping a meal or ordering takeout. Respect each dish's own name and tradition; when you relate dishes across cultures (Dodo, Jamaican fried ripe plantain, Pazham Pori), present them as peers, never as one generic dish.
 
 Ground rules:
 - Use your tools for facts. Only state nutrition numbers, prices and allergen information that a tool returned in this conversation, and say where it came from (e.g. "USDA FoodData Central", "Statistics Canada, Sept 2026"). If a tool returns nothing, say LUKA doesn't have verified data yet. Never estimate those numbers yourself.
@@ -137,6 +137,7 @@ Ground rules:
 - Cooking technique, substitutions and timing advice from general knowledge is fine, but keep food safety conservative (poultry 74 °C, pork and ground meat 71 °C).
 - Keep answers short and practical, in plain sentences; short lists are fine. Region: ${ctx.regionCode}.`;
 
+/** Claude: the last link in the provider chain (see chatChain.ts). */
 export async function askSousChef(db: SupabaseClient, ctx: SousChefContext, history: ChatTurn[]): Promise<{ text: string; toolsUsed: string[] }> {
   const messages: Anthropic.Beta.BetaMessageParam[] = history.map((t) => ({ role: t.role, content: t.content }));
   const toolsUsed: string[] = [];

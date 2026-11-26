@@ -4,13 +4,34 @@ import { useEffect, useState } from "react";
 import type { Ingredient, PantryItem, Recipe } from "../types";
 import { getSupabase } from "../cloud/supabase";
 
-let status: Promise<boolean> | null = null;
-function aiStatus() {
+export interface Features {
+  enabled: boolean;
+  chat: boolean;
+  instacart: boolean;
+  places: "google" | "osm";
+}
+const OFF: Features = { enabled: false, chat: false, instacart: false, places: "osm" };
+let status: Promise<Features> | null = null;
+function features() {
   status ??= fetch("/api/ai/status")
     .then((r) => r.json())
-    .then((d: { enabled?: boolean }) => !!d.enabled)
-    .catch(() => false);
+    .then((d: Partial<Features>) => ({ ...OFF, ...d }))
+    .catch(() => OFF);
   return status;
+}
+const aiStatus = () => features().then((f) => f.enabled);
+
+/** Optional services the server has keys for. */
+export function useFeatures(): Features {
+  const [f, setF] = useState<Features>(OFF);
+  useEffect(() => {
+    let live = true;
+    features().then((v) => live && setF(v));
+    return () => {
+      live = false;
+    };
+  }, []);
+  return f;
 }
 
 /** False until the server confirms a model key is configured. */

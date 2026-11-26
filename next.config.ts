@@ -10,7 +10,7 @@ const securityHeaders = [
   { key: "X-Frame-Options", value: "DENY" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
   // Camera stays off until Push-to-Look ships; microphone is used by Cook Mode voice commands.
-  { key: "Permissions-Policy", value: "camera=(), geolocation=(), microphone=(self)" },
+  { key: "Permissions-Policy", value: "camera=(), geolocation=(self), microphone=(self)" },
 ];
 
 const nextConfig: NextConfig = {

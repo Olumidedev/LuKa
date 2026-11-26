@@ -10,6 +10,10 @@ import { computeShopping, planEntries, weeklyTrip, type ShopItem, type ShopTrip 
 import { newId } from "@/lib/state/defaults";
 import { useStore } from "@/lib/state/store";
 import type { Aisle } from "@/lib/types";
+import { useFeatures, call } from "@/lib/ai/client";
+import { listKey, type ListLine } from "@/lib/connectors/instacart";
+import { SPECIALTY, STORE_LABEL, storeKinds } from "@/lib/data/specialty";
+import { NearbySheet, type NearbyQuery } from "./kb/NearbySheet";
 import { PantryBar } from "./PantryBar";
 import { useUI } from "./uiState";
 import { Button, Label, Segmented, Sheet, cx, inputCls, money, useToast } from "./ui";
@@ -22,6 +26,9 @@ export function GroceryTab() {
   const [storesOpen, setStoresOpen] = useState(false);
   const [showCupboard, setShowCupboard] = useState(false);
   const [showCovered, setShowCovered] = useState(false);
+  const [nearby, setNearby] = useState<NearbyQuery | null>(null);
+  const [shopping_, setShoppingBusy] = useState(false);
+  const features = useFeatures();
 
   const instant = state.planType === "instant";
   const instantRecipe = instant && state.instant.pickId ? ctx.byId.get(state.instant.pickId) : undefined;
@@ -82,6 +89,53 @@ export function GroceryTab() {
     }
   };
 
+  const specialty = t.items.filter((i) => SPECIALTY[i.key]);
+  const kinds = storeKinds(state.cuisines, specialty.map((i) => i.key));
+  const findGrocers = () =>
+    setNearby({
+      want: "grocers",
+      title: kinds.length ? `${kinds.map((k) => STORE_LABEL[k]).join(" & ")} grocers near you` : "Specialty grocers near you",
+      mapsQuery: `${kinds.map((k) => STORE_LABEL[k]).join(" or ") || "international"} grocery store`,
+      kinds,
+    });
+
+  const shopInstacart = async () => {
+    const lines: ListLine[] = t.items
+      .filter((i) => !state.inCart[cartKey(i.key)])
+      .map((i) => ({ name: i.ing.name, amount: i.packs * i.ing.pack, unit: i.ing.unit, display: `${i.ing.name}: ${formatPacks(i.packs, i.ing)}` }));
+    if (!lines.length) return toast({ text: "Everything is already in your cart." });
+    const cacheKey = `luka:instacart:${listKey(lines)}`;
+    let cached: { url: string; at: number } | null = null;
+    try {
+      cached = JSON.parse(localStorage.getItem(cacheKey) ?? "null");
+    } catch {
+      /* ignore */
+    }
+    // Open the tab now (inside the tap) so browsers don't block it, then point it at Instacart.
+    const win = window.open("", "_blank");
+    if (win) win.opener = null;
+    try {
+      let url = cached && Date.now() - cached.at < 25 * 86_400_000 ? cached.url : "";
+      if (!url) {
+        setShoppingBusy(true);
+        url = (await call<{ url: string }>("/api/shop/instacart", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ title: "LUKA shopping list", lines }) })).url;
+        try {
+          localStorage.setItem(cacheKey, JSON.stringify({ url, at: Date.now() }));
+        } catch {
+          /* ignore */
+        }
+      }
+      track("instacart_opened", { items: lines.length, cached: !!cached });
+      if (win) win.location.href = url;
+      else window.location.href = url;
+    } catch (e) {
+      win?.close();
+      toast({ text: e instanceof Error ? e.message : "Couldn't open Instacart. Copy your list instead." });
+    } finally {
+      setShoppingBusy(false);
+    }
+  };
+
   const groups: { store?: string; aisle: (typeof AISLES)[number]; items: ShopItem[] }[] = [];
   for (const s of multiStore ? state.stores : [undefined]) {
     for (const a of AISLES.filter((x) => !x.cupboard)) {
@@ -120,10 +174,28 @@ export function GroceryTab() {
           <Button size="sm" onClick={copyList}>
             Copy list
           </Button>
+          {features.instacart && (
+            <Button size="sm" variant="leaf" onClick={shopInstacart} disabled={shopping_}>
+              {shopping_ ? "Opening…" : "Shop on Instacart"}
+            </Button>
+          )}
         </div>
       </div>
 
       <PantryBar />
+
+      {specialty.length > 0 && (
+        <section className="flex flex-wrap items-center gap-3 rounded-3xl border border-line bg-surface p-4 sm:p-5">
+          <p className="min-w-0 flex-1 text-sm">
+            <span className="font-semibold">Big stores often don&apos;t stock </span>
+            {specialty.slice(0, 5).map((i) => i.ing.name.toLowerCase()).join(", ")}
+            {specialty.length > 5 ? ` and ${specialty.length - 5} more` : ""}.
+          </p>
+          <Button size="sm" onClick={findGrocers}>
+            Find grocers nearby
+          </Button>
+        </section>
+      )}
 
       <div className="grid gap-4">
         {groups.map((g, gi) => (
@@ -185,6 +257,7 @@ export function GroceryTab() {
 
       <p className="text-[12px] text-muted">Prices are Toronto-area estimates until you add your own; they update as your price book grows.</p>
       <StoresSheet open={storesOpen} onClose={() => setStoresOpen(false)} />
+      <NearbySheet query={nearby} onClose={() => setNearby(null)} />
     </div>
   );
 }

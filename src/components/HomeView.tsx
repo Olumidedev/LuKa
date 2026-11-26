@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useAIEnabled } from "@/lib/ai/client";
+import { useFeatures } from "@/lib/ai/client";
 import { useProfile } from "@/lib/cloud/profile";
 import { useCloud } from "@/lib/cloud/sync";
 import { dayLabel, toISO } from "@/lib/engine/dates";
@@ -25,7 +25,7 @@ export function HomeView() {
 
   const ui = useUI();
   const cloud = useCloud();
-  const ai = useAIEnabled();
+  const ai = useFeatures().chat;
   const [asking, setAsking] = useState(false);
   const plan = state.plan;
   const { name } = useProfile();
