@@ -12,6 +12,8 @@ import { formatAmountWithName, recipeNeeds, roundQty } from "./quantities";
 export type StepPart = { t: "text"; v: string } | { t: "qty"; v: string } | { t: "timer"; min: number };
 
 export interface CookCard {
+  /** The recipe this card was built from (for feedback). */
+  recipeId?: string;
   title: string;
   /** "For 3 people", "For 3 people + tomorrow's lunch". */
   serves: string;
@@ -70,6 +72,7 @@ export function buildCookCard(ctx: EngineContext, recipe: Recipe, portions: numb
   const safety = [...new Set(recipe.ingredients.map((ri) => SAFE_TEMPS[ri.key]).filter(Boolean) as string[])];
   if (recipe.batch) safety.push("Leftovers: cool within 2 hours, refrigerate, and reheat to 74 °C / 165 °F.");
   return {
+    recipeId: recipe.id,
     title: recipe.name,
     serves: `For ${people} ${people === 1 ? "person" : "people"}${doubled ? " + tomorrow's lunch" : ""}`,
     countries: recipe.countries,

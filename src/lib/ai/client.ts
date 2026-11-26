@@ -31,7 +31,7 @@ async function authHeader(): Promise<Record<string, string>> {
   return data.session ? { authorization: `Bearer ${data.session.access_token}` } : {};
 }
 
-async function call<T>(url: string, init: RequestInit): Promise<T> {
+export async function call<T>(url: string, init: RequestInit): Promise<T> {
   const res = await fetch(url, { ...init, headers: { ...(init.headers as Record<string, string>), ...(await authHeader()) } });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw Object.assign(new Error((data as { error?: string }).error ?? "The AI request failed."), { status: res.status });

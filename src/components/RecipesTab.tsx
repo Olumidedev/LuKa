@@ -2,7 +2,8 @@
 
 import { useMemo, useState } from "react";
 import { ALL_COUNTRIES } from "@/lib/data/countries";
-import { aiGenerateRecipes, aiParseRecipe, useAIEnabled, type AIRecipes } from "@/lib/ai/client";
+import { aiGenerateRecipes, aiParseRecipe, call, useAIEnabled, type AIRecipes } from "@/lib/ai/client";
+import { useCloud } from "@/lib/cloud/sync";
 import { normalizeRecipe, parseIngredientLine } from "@/lib/ai/normalize";
 import { track } from "@/lib/analytics";
 import { useCatalog } from "@/lib/cloud/catalog";
@@ -136,6 +137,7 @@ function useSaveRecipes(shared = false) {
 
 function AddRecipeSheet({ open, onClose, ai }: { open: boolean; onClose: () => void; ai: boolean }) {
   const save = useSaveRecipes();
+  const toast = useToast();
   const [mode, setMode] = useState<"paste" | "manual">(ai ? "paste" : "manual");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
@@ -148,6 +150,8 @@ function AddRecipeSheet({ open, onClose, ai }: { open: boolean; onClose: () => v
   const [mins, setMins] = useState("45");
   const [ings, setIngs] = useState("");
   const [steps, setSteps] = useState("");
+  const [share, setShare] = useState(false);
+  const cloud = useCloud();
   const effMode = ai ? mode : "manual";
 
   const reset = () => {
@@ -194,6 +198,20 @@ function AddRecipeSheet({ open, onClose, ai }: { open: boolean; onClose: () => v
       return;
     }
     save({ recipes: [n.recipe], ingredients: n.ingredients });
+    if (share && cloud.household) {
+      // Shared recipes go to LUKA's review queue; the household keeps its own copy either way.
+      call("/api/recipes/submit", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ title: name, country, meals, minutes: Number(mins) || 45, ingredients: ings, steps, credit, consent: true }),
+      })
+        .then(() => {
+          track("recipe_shared");
+          toast({ text: "Thank you! LUKA will review it before other families see it." });
+        })
+        .catch((e) => toast({ text: e instanceof Error ? e.message : "Couldn't share it this time." }));
+    }
+    setShare(false);
     reset();
   };
 
@@ -223,7 +241,7 @@ function AddRecipeSheet({ open, onClose, ai }: { open: boolean; onClose: () => v
             ]}
           />
         ) : (
-          <p className="rounded-2xl bg-sunk p-3 text-[13px] text-muted">Pasting a blog post or video transcript needs the AI service (add a Gemini key on the server). Typing a recipe in works now.</p>
+          <p className="rounded-2xl bg-sunk p-3 text-[13px] text-muted">Pasting a blog post or video transcript needs the AI service (add a Claude key on the server). Typing a recipe in works now.</p>
         )}
         {effMode === "paste" ? (
           <>
@@ -273,6 +291,14 @@ function AddRecipeSheet({ open, onClose, ai }: { open: boolean; onClose: () => v
               <Label htmlFor="r-steps">Steps, one per line</Label>
               <textarea id="r-steps" rows={5} className={cx(inputCls, "h-auto py-2")} value={steps} onChange={(e) => setSteps(e.target.value)} />
             </div>
+            {cloud.household && (
+              <label className="flex items-start gap-2 rounded-2xl bg-sunk p-3 text-sm">
+                <input type="checkbox" className="mt-1" checked={share} onChange={(e) => setShare(e.target.checked)} />
+                <span>
+                  Share this recipe with other LUKA families. It&apos;s reviewed first and credited as you write it above. Only the recipe is shared, never your household&apos;s details.
+                </span>
+              </label>
+            )}
           </>
         )}
         <div className="grid gap-3 sm:grid-cols-2">

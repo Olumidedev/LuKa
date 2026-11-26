@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { track } from "@/lib/analytics";
 import { useConfig } from "@/lib/cloud/config";
+import { useCloud } from "@/lib/cloud/sync";
 import { buildCookCard, stepText } from "@/lib/engine/cookcard";
 import { dayLabel } from "@/lib/engine/dates";
 import { encodeHandoff } from "@/lib/engine/handoff";
@@ -12,6 +13,7 @@ import { isPerishable } from "@/lib/engine/shopping";
 import { useStore } from "@/lib/state/store";
 import type { Recipe } from "@/lib/types";
 import { useUI, type MealRef } from "./uiState";
+import { PaletteExpansionCard, SimilarDishesStrip } from "./kb/Discover";
 import { Button, Sheet, Tag, money, useToast } from "./ui";
 
 const TAKEOUT_MARKUP = 1.28; // delivery fee + service + tax + tip, flat and stated
@@ -22,6 +24,7 @@ export function MealSheet({ target, onClose }: { target: MealRef | null; onClose
   const toast = useToast();
   const [view, setView] = useState<"detail" | "swap" | "handoff">("detail");
   const config = useConfig();
+  const cloud = useCloud();
 
   const slot = target?.kind === "slot" ? state.plan?.days[target.day]?.meals[target.meal] : undefined;
   const recipeId = target?.kind === "recipe" ? target.recipeId : slot?.recipeId;
@@ -38,6 +41,12 @@ export function MealSheet({ target, onClose }: { target: MealRef | null; onClose
   if (!target || !recipe || !card) return null;
 
   const gate = ctx.gates.get(recipe.id)!;
+  const planIds = [...new Set([recipe.id, ...(state.plan?.days.flatMap((d) => Object.values(d.meals).map((m) => m.recipeId)) ?? [])])].filter((x): x is string => !!x).slice(0, 20);
+  const openOther = (id: string) => {
+    if (!ctx.byId.has(id)) return toast({ text: "That dish isn't in your recipe list yet." });
+    setView("detail");
+    ui.openMeal({ kind: "recipe", recipeId: id });
+  };
   const n = perServing(recipe, ctx.ings);
   const b = badges(n);
   const cookCost = costPerServing(recipe, ctx.ings) * ctx.portions;
@@ -232,6 +241,13 @@ export function MealSheet({ target, onClose }: { target: MealRef | null; onClose
               )}
             </section>
           </div>
+
+          {cloud.household && (
+            <>
+              <SimilarDishesStrip recipeId={recipe.id} onOpen={openOther} />
+              <PaletteExpansionCard householdId={cloud.household.id} recipeIds={planIds.length ? planIds : [recipe.id]} onOpen={openOther} />
+            </>
+          )}
         </div>
       )}
 

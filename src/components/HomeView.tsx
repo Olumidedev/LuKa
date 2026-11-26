@@ -1,13 +1,16 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import { useAIEnabled } from "@/lib/ai/client";
 import { useAuth } from "@/lib/cloud/auth";
+import { useCloud } from "@/lib/cloud/sync";
 import { dayLabel, toISO } from "@/lib/engine/dates";
 import { MEALS, MEAL_LABEL, prepTips } from "@/lib/engine/planner";
 import { computeShopping, planEntries, weeklyTrip } from "@/lib/engine/shopping";
 import { regenerate } from "@/lib/state/actions";
 import { useStore } from "@/lib/state/store";
 import type { MealType } from "@/lib/types";
+import { AskLukaSheet } from "./kb/AskLuka";
 import { useUI } from "./uiState";
 import { Button, Tag, cx, money } from "./ui";
 
@@ -21,6 +24,9 @@ export function HomeView() {
   const { state, ctx, update } = useStore();
   const { user } = useAuth();
   const ui = useUI();
+  const cloud = useCloud();
+  const ai = useAIEnabled();
+  const [asking, setAsking] = useState(false);
   const plan = state.plan;
   const name = state.members[0]?.name?.trim() || user?.email?.split("@")[0] || "";
   const today = toISO(new Date());
@@ -147,9 +153,15 @@ export function HomeView() {
         >
           Plan an instant meal
         </Button>
+        {cloud.household && ai && (
+          <Button variant="leaf" onClick={() => setAsking(true)}>
+            Ask LUKA
+          </Button>
+        )}
         <Button onClick={() => ui.setTab("recipes")}>Add a family recipe</Button>
         <Button onClick={() => ui.setTab("account")}>Invite your household</Button>
       </section>
+      <AskLukaSheet open={asking} onClose={() => setAsking(false)} />
     </div>
   );
 }

@@ -3,7 +3,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { track } from "@/lib/analytics";
 import { useConfig } from "@/lib/cloud/config";
+import { useCloud } from "@/lib/cloud/sync";
+import { useStore } from "@/lib/state/store";
 import { stepText, type CookCard, type StepPart } from "@/lib/engine/cookcard";
+import { CookModeFeedbackCard } from "./kb/CookModeFeedbackCard";
 import { Button, cx } from "./ui";
 
 interface Timer {
@@ -77,6 +80,11 @@ export function CookMode({ card, onClose }: { card: CookCard; onClose: () => voi
   const [showIngredients, setShowIngredients] = useState(false);
   const recRef = useRef<Recognition | null>(null);
   const config = useConfig();
+  const cloud = useCloud();
+  const { state } = useStore();
+  const [rating, setRating] = useState(false);
+  // Household-only recipes live on this device, not in the shared catalog, so they can't be rated there.
+  const canRate = !!cloud.household && !!card.recipeId && !state.customRecipes.some((r) => r.id === card.recipeId);
   useEffect(() => track("cook_started", { steps: card.steps.length }), [card.steps.length]);
   const audio = useRef<AudioContext | null>(null);
   const stateRef = useRef({ step, speak });
@@ -238,6 +246,14 @@ export function CookMode({ card, onClose }: { card: CookCard; onClose: () => voi
 
   const isLast = step === card.steps.length - 1;
 
+  if (rating && cloud.household && card.recipeId) {
+    return (
+      <div className="fixed inset-0 z-50 grid place-items-center overflow-y-auto bg-bg p-4" role="dialog" aria-modal="true" aria-label="Rate this meal">
+        <CookModeFeedbackCard householdId={cloud.household.id} recipeId={card.recipeId} title={card.title} onDone={onClose} />
+      </div>
+    );
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-bg" role="dialog" aria-modal="true" aria-label={`Cooking ${card.title}`}>
       <header className="flex items-center gap-3 border-b border-line px-[max(16px,env(safe-area-inset-left))] pt-[max(12px,env(safe-area-inset-top))] pb-3">
@@ -370,7 +386,8 @@ export function CookMode({ card, onClose }: { card: CookCard; onClose: () => voi
             variant="leaf"
             onClick={() => {
               track("cook_finished", { steps: card.steps.length, timers: timers.length, voice: listening });
-              onClose();
+              if (canRate) setRating(true);
+              else onClose();
             }}
           >
             Finished

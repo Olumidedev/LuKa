@@ -20,8 +20,10 @@ import {
 import { mergeConfig, type AppConfig } from "@/lib/cloud/config";
 import { Button, Label, Segmented, Tag, cx, inputCls, useToast } from "../ui";
 import { BarList, ColumnChart, Stat } from "./charts";
+import { DataSection } from "./DataSection";
+import { AdminReviewQueue } from "./ReviewQueue";
 
-type Section = "overview" | "users" | "recipes" | "issues" | "settings";
+type Section = "overview" | "users" | "recipes" | "review" | "data" | "issues" | "settings";
 
 const EVENT_LABEL: Record<string, string> = {
   app_opened: "Opened the app",
@@ -40,6 +42,9 @@ const EVENT_LABEL: Record<string, string> = {
   signed_in: "Signed in",
   household_joined: "Joined a household",
   invite_created: "Invited someone",
+  cook_feedback: "Rated a meal",
+  souschef_asked: "Asked LUKA",
+  recipe_shared: "Shared a family recipe",
 };
 
 const shortDate = (iso: string) => new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric" });
@@ -60,6 +65,8 @@ export default function AdminPanel() {
             { value: "overview", label: "Overview" },
             { value: "users", label: "Users" },
             { value: "recipes", label: "Recipes" },
+            { value: "review", label: "Review" },
+            { value: "data", label: "Data" },
             { value: "issues", label: "Errors & feedback" },
             { value: "settings", label: "Settings" },
           ]}
@@ -68,6 +75,8 @@ export default function AdminPanel() {
       {section === "overview" && <OverviewSection />}
       {section === "users" && <UsersSection me={user?.id ?? ""} />}
       {section === "recipes" && <RecipesSection />}
+      {section === "review" && <AdminReviewQueue />}
+      {section === "data" && <DataSection />}
       {section === "issues" && <IssuesSection />}
       {section === "settings" && <SettingsSection />}
     </div>

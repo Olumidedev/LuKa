@@ -18,6 +18,9 @@ export const EVENT_NAMES = [
   "invite_created",
   "client_error",
   "feedback",
+  "cook_feedback",
+  "souschef_asked",
+  "recipe_shared",
 ] as const;
 
 export type EventName = (typeof EVENT_NAMES)[number];
