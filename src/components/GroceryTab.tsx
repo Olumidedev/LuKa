@@ -94,8 +94,8 @@ export function GroceryTab() {
   const findGrocers = () =>
     setNearby({
       want: "grocers",
-      title: kinds.length ? `${kinds.map((k) => STORE_LABEL[k]).join(" & ")} grocers near you` : "Specialty grocers near you",
-      mapsQuery: `${kinds.map((k) => STORE_LABEL[k]).join(" or ") || "international"} grocery store`,
+      title: "Specialty grocers near you",
+      mapsQuery: `${kinds.length === 1 ? STORE_LABEL[kinds[0]] : kinds.length ? kinds.slice(0, 2).map((k) => STORE_LABEL[k]).join(" ") : "international"} grocery store`,
       kinds,
     });
 
