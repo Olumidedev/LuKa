@@ -2,13 +2,15 @@
   "name": "luka",
   "version": "0.2.0",
   "private": true,
-  "description": "Luka \u2014 a culturally fluent sous-chef: household-aware meal plans, chained groceries and guided cooking.",
+  "description": "Luka — a culturally fluent sous-chef: household-aware meal plans, chained groceries and guided cooking.",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "seed:build": "jiti scripts/build-seed.ts",
+    "seed:load": "node scripts/seed-kb.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.8.0",

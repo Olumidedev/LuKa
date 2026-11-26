@@ -19,6 +19,7 @@ import { Inventory, isPerishable, weeklyTrip } from "./shopping";
  */
 
 export const MEALS: MealType[] = ["b", "l", "d"];
+const MEAL_ROLES = new Set(["main_one_pot", "protein_main", "soup_stew"]);
 export const MEAL_LABEL: Record<MealType, string> = { b: "Breakfast", l: "Lunch", d: "Dinner" };
 
 function mulberry32(seed: number) {
@@ -49,6 +50,8 @@ export function candidatesFor(ctx: EngineContext, meal: MealType): Candidate[] {
   const all: Candidate[] = [];
   for (const recipe of ctx.recipes) {
     if (!recipe.meals.includes(meal)) continue;
+    // Sides and bases (dodo, rice & peas) complete a plate; they aren't a meal on their own.
+    if (recipe.plateRole && !MEAL_ROLES.has(recipe.plateRole)) continue;
     const gate = ctx.gates.get(recipe.id);
     if (!gate?.ok) continue;
     const m = picks.length ? cuisineMatch(recipe, picks) : { score: 1, pick: null, neighbour: false };

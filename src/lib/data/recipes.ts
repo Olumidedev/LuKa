@@ -1,4 +1,5 @@
 import type { MealType, Recipe } from "../types";
+import { HERITAGE, LIBRARY_ARCHETYPES } from "./heritage";
 
 /**
  * Curated, human-written library. Every recipe is written for 4 adult portions;
@@ -40,7 +41,7 @@ function r(
   };
 }
 
-export const LIBRARY: Recipe[] = [
+const BASE_LIBRARY: Recipe[] = [
   // ───────────── West Africa
   r("ng_jollof", "Party Jollof Rice with Roast Chicken", "Nigeria", "ld", 30, 75, 2, true,
     "chicken:1000 rice:500 tomato:500 redpepper:200 scotch:10 onion:300 tomatopaste:70 oil:80 stock:700 curry:5 thyme:3 bay:2", [
@@ -473,4 +474,10 @@ export const LIBRARY: Recipe[] = [
       "Fold in sliced {kale} and cook until tender [t4].",
       "Fry sliced ripe {plantain} until golden and serve alongside.",
     ]),
+];
+
+/** The built-in library: everyday dishes plus the heritage plate components. */
+export const LIBRARY: Recipe[] = [
+  ...BASE_LIBRARY.map((r) => (LIBRARY_ARCHETYPES[r.id] ? { ...r, archetype: LIBRARY_ARCHETYPES[r.id] } : r)),
+  ...HERITAGE,
 ];

@@ -65,6 +65,7 @@ const list: Ingredient[] = [
   ing("spinach", "Spinach", "g", "produce", 300, "300 g bag", 3.99, 5, [23, 2.9, 2.2, 2.7, 194, 99, 0.1]),
   ing("kale", "Kale / callaloo greens", "g", "produce", 250, "bunch", 2.99, 6, [49, 4.3, 3.6, 1.5, 141, 150, 0.2]),
   ing("yam", "Puna yam", "g", "produce", 1500, "tuber (~1.5 kg)", 8.99, 21, [118, 1.5, 4.1, 0.5, 23, 17, 0]),
+  ing("ugu", "Fluted pumpkin leaves (ugu)", "g", "produce", 250, "bunch", 3.49, 4, [32, 3.5, 2.5, 2.5, 90, 120, 0]),
   ing("plantain", "Ripe plantains", "g", "produce", 250, "plantain", 0.89, 6, [122, 1.3, 2.3, 0.6, 22, 3, 0], { countable: true }),
   ing("greenplantain", "Green plantains", "g", "produce", 250, "green plantain", 0.89, 8, [122, 1.3, 2.3, 0.6, 22, 3, 0], { countable: true }),
   ing("potato", "Potatoes", "g", "produce", 200, "potato", 0.4, 30, [77, 2, 2.2, 0.8, 15, 12, 0], { countable: true }),
@@ -122,6 +123,8 @@ const list: Ingredient[] = [
 
   // Grains & dry goods
   ing("rice", "Long-grain rice", "g", "grains", 2000, "2 kg bag", 5.99, 365, [360, 7, 1.3, 0.8, 8, 10, 0]),
+  ing("parboiledrice", "Parboiled long-grain rice", "g", "grains", 2000, "2 kg bag", 6.49, 365, [367, 7.5, 1.7, 0.7, 6, 15, 0]),
+  ing("honeybeans", "Honey beans (ewa oloyin)", "g", "grains", 900, "900 g bag", 5.99, 365, [336, 23, 11, 8, 600, 110, 0.1]),
   ing("pasta", "Short pasta", "g", "grains", 450, "450 g box", 2.49, 365, [371, 13, 3.2, 3.3, 18, 21, 0], { allergens: ["gluten"] }),
   ing("ricenoodles", "Rice vermicelli", "g", "grains", 400, "400 g pack", 2.99, 365, [360, 6, 1.6, 0.7, 3, 18, 0]),
   ing("couscous", "Couscous", "g", "grains", 500, "500 g box", 3.99, 365, [376, 13, 5, 1.1, 20, 24, 0], { allergens: ["gluten"] }),

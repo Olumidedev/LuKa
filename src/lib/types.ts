@@ -98,7 +98,19 @@ export interface Recipe {
    */
   steps: string[];
   source: { type: "library" | "ai" | "user"; credit?: string; url?: string };
+  /** Where this dish sits on a plate. Sides and bases aren't scheduled alone; they pair with mains. */
+  plateRole?: PlateRole;
+  /** Cross-cultural family this dish belongs to (e.g. "fried-ripe-plantain"). */
+  archetype?: string;
+  /** Local names, e.g. [{ name: "Dòdò", lang: "yo", region: "NG" }]. */
+  localNames?: { name: string; lang?: string; region?: string }[];
+  flavorTags?: string[];
+  /** Knowledge-base trust and ratings, when loaded from the catalog. */
+  verification?: "unverified" | "source_verified" | "curated";
+  rating?: { avg: number; count: number };
 }
+
+export type PlateRole = "main_one_pot" | "base_starch" | "protein_main" | "vegetable_side" | "sweet_side" | "soup_stew" | "condiment";
 
 export type AgeGroup = "adult" | "teen" | "child" | "toddler";
 export type Diet = "" | "vegetarian" | "vegan" | "pescatarian";
