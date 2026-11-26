@@ -19,9 +19,10 @@ function triedRecently(c: string) {
     return true;
   }
 }
-function markTried(c: string) {
+/** Marks a country as tried; `retryInMs` lets server-side failures retry sooner than a day. */
+function markTried(c: string, retryInMs = RETRY_MS) {
   try {
-    localStorage.setItem(key(c), String(Date.now()));
+    localStorage.setItem(key(c), String(Date.now() - RETRY_MS + retryInMs));
   } catch {
     /* ignore */
   }
@@ -62,8 +63,9 @@ export function useAutoTopUp(): { working: string | null; added: number } {
           update((d) => regenerate(d));
         }
       })
-      .catch(() => {
-        /* retried tomorrow; the plan still works with what's there */
+      .catch((e: { status?: number }) => {
+        // A daily-limit answer waits a day; anything else (outage, billing) retries in an hour.
+        if (e?.status !== 429) markTried(next, 60 * 60 * 1000);
       })
       .finally(() => {
         running.current = false;

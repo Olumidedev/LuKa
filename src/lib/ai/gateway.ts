@@ -70,8 +70,15 @@ export async function generateStructured<S extends z.ZodType>(opts: {
     if (e instanceof AIError) throw e;
     if (e instanceof Anthropic.RateLimitError) throw new AIError("The AI service is busy. Try again in a minute.", 429);
     if (e instanceof Anthropic.AuthenticationError) throw new AIError("The AI key on the server isn't valid.", 503);
-    if (e instanceof Anthropic.BadRequestError) throw new AIError(`The AI request was rejected: ${e.message}`, 502);
-    if (e instanceof Anthropic.APIError) throw new AIError("The AI service had a problem. Try again shortly.", 502);
+    if (e instanceof Anthropic.BadRequestError) {
+      // Never pass provider details (billing, request ids) to the browser; log them for admins instead.
+      console.error("[ai] request rejected:", e.message);
+      throw new AIError("AI recipes are unavailable right now. LUKA will try again later.", 503);
+    }
+    if (e instanceof Anthropic.APIError) {
+      console.error("[ai] api error:", e.status, e.message);
+      throw new AIError("The AI service had a problem. Try again shortly.", 502);
+    }
     throw new AIError("Couldn't reach the AI service.", 502);
   }
 }

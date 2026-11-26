@@ -34,7 +34,7 @@ async function authHeader(): Promise<Record<string, string>> {
 async function call<T>(url: string, init: RequestInit): Promise<T> {
   const res = await fetch(url, { ...init, headers: { ...(init.headers as Record<string, string>), ...(await authHeader()) } });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error((data as { error?: string }).error ?? "The AI request failed.");
+  if (!res.ok) throw Object.assign(new Error((data as { error?: string }).error ?? "The AI request failed."), { status: res.status });
   return data as T;
 }
 
