@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { runWeeklyGapAgent } from "@/lib/kb/gapAgent";
+import { batchProvider } from "@/lib/ai/batch";
 import { aiConfigured } from "@/lib/ai/gateway";
 import { authorizeJob } from "@/lib/server/cron";
 import { supabaseAdmin } from "@/lib/server/supabaseAdmin";
@@ -11,7 +12,7 @@ async function run(req: Request) {
   const who = await authorizeJob(req);
   if (!who) return NextResponse.json({ error: "Not allowed." }, { status: 401 });
   const db = supabaseAdmin();
-  if (!db || !aiConfigured()) return NextResponse.json({ error: "Needs Supabase and the Claude key." }, { status: 503 });
+  if (!db || (!aiConfigured() && batchProvider() !== "ollama")) return NextResponse.json({ error: "Needs Supabase and a model (Claude key or Ollama)." }, { status: 503 });
   try {
     const out = await runWeeklyGapAgent(db, { minSelections: Number(new URL(req.url).searchParams.get("min") ?? 3) });
     return NextResponse.json(out);

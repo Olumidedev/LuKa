@@ -29,6 +29,7 @@ const JOBS = [
   { url: "/api/cron/sync-data?job=prices", label: "Sync StatCan prices" },
   { url: "/api/cron/sync-data?job=cnf", label: "Sync Canadian Nutrient File" },
   { url: "/api/cron/sync-data?job=fdc", label: "Sync USDA FoodData Central" },
+  { url: "/api/cron/sync-data?job=embed", label: "Embed new recipes" },
   { url: "/api/cron/weekly-gap", label: "Run cuisine gap agent" },
 ];
 

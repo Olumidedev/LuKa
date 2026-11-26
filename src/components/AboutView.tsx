@@ -6,7 +6,7 @@ import { ALL_COUNTRIES } from "@/lib/data/countries";
 import { useStore } from "@/lib/state/store";
 import { FeedbackSheet } from "./FeedbackSheet";
 import { LogoMark, Wordmark } from "./brand";
-import { Button } from "./ui";
+import { Button, Tag } from "./ui";
 
 const VERSION = process.env.NEXT_PUBLIC_APP_VERSION ?? "dev";
 const BUILD = process.env.NEXT_PUBLIC_BUILD ?? "";
@@ -58,8 +58,21 @@ export function AboutView() {
       </section>
 
       <section className="grid gap-2">
+        <h2 className="flex items-center gap-2 text-lg font-semibold">
+          LUKA Premium <Tag tone="saffron">Coming soon</Tag>
+        </h2>
+        <ul className="grid list-disc gap-1 pl-5 text-muted">
+          <li>More Ask LUKA questions each day, answered even faster.</li>
+          <li>A live map of specialty grocers and restaurants, with photos and opening hours.</li>
+          <li>Same-day grocery delivery from more stores.</li>
+        </ul>
+      </section>
+
+      <section className="grid gap-2">
         <h2 className="text-lg font-semibold">Built with</h2>
-        <p className="text-muted">Next.js, React, Tailwind CSS, Supabase, Claude by Anthropic, and the Fraunces and Plus Jakarta Sans typefaces.</p>
+        <p className="text-muted">
+          Next.js, React, Tailwind CSS, Supabase, Claude by Anthropic, Groq, Geoapify with OpenStreetMap data (© OpenStreetMap contributors), and the Fraunces and Plus Jakarta Sans typefaces.
+        </p>
       </section>
 
       <Button className="justify-self-start" onClick={() => setFeedback(true)}>

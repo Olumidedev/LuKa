@@ -13,6 +13,6 @@ export function GET() {
     enabled: aiConfigured() && db,
     chat: chatConfigured() && db,
     instacart: !!process.env.INSTACART_API_KEY,
-    places: process.env.GOOGLE_MAPS_API_KEY ? "google" : "osm",
+    nearby: !!process.env.GEOAPIFY_API_KEY && db,
   });
 }

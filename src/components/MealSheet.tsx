@@ -13,7 +13,7 @@ import { isPerishable } from "@/lib/engine/shopping";
 import { useStore } from "@/lib/state/store";
 import type { Recipe } from "@/lib/types";
 import { useUI, type MealRef } from "./uiState";
-import { cuisineTags } from "@/lib/data/specialty";
+import { restaurantCategories } from "@/lib/data/specialty";
 import { PaletteExpansionCard, SimilarDishesStrip } from "./kb/Discover";
 import { NearbySheet, type NearbyQuery } from "./kb/NearbySheet";
 import { Button, Sheet, Tag, money, useToast } from "./ui";
@@ -194,8 +194,7 @@ export function MealSheet({ target, onClose }: { target: MealRef | null; onClose
                       want: "restaurants",
                       title: `${recipe.countries.join(" & ")} food near you`,
                       mapsQuery: `${recipe.countries[0]} restaurant`,
-                      cuisines: cuisineTags(recipe.countries.map((c) => ({ type: "country" as const, value: c }))),
-                      cuisineNames: recipe.countries,
+                      categories: restaurantCategories(recipe.countries.map((c) => ({ type: "country" as const, value: c }))),
                     })
                   }
                 >

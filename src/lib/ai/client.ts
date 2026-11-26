@@ -8,9 +8,9 @@ export interface Features {
   enabled: boolean;
   chat: boolean;
   instacart: boolean;
-  places: "google" | "osm";
+  nearby: boolean;
 }
-const OFF: Features = { enabled: false, chat: false, instacart: false, places: "osm" };
+const OFF: Features = { enabled: false, chat: false, instacart: false, nearby: false };
 let status: Promise<Features> | null = null;
 function features() {
   status ??= fetch("/api/ai/status")

@@ -15,8 +15,6 @@ describe("sous-chef provider chain", () => {
   beforeEach(() => {
     calls = [];
     vi.stubEnv("GROQ_API_KEY", "g");
-    vi.stubEnv("OPENROUTER_API_KEY", "o");
-    vi.stubEnv("CEREBRAS_API_KEY", "");
     vi.stubEnv("ANTHROPIC_API_KEY", "a");
   });
   afterEach(() => {
@@ -27,15 +25,16 @@ describe("sous-chef provider chain", () => {
 
   it("orders configured providers and skips ones without keys", async () => {
     const { chainOrder } = await import("./chatChain");
-    expect(chainOrder()).toEqual(["groq", "openrouter", "anthropic"]);
+    expect(chainOrder()).toEqual(["groq", "anthropic"]);
+    vi.stubEnv("ANTHROPIC_API_KEY", "");
+    expect(chainOrder()).toEqual(["groq"]);
   });
 
-  it("falls back on a rate limit, runs read-only tools with the household's scope, and never leaks a free-tier data policy", async () => {
+  it("answers from Groq using read-only tools scoped to the household", async () => {
     vi.stubGlobal("fetch", async (url: string | URL | Request, init?: RequestInit) => {
       const u = new URL(typeof url === "string" ? url : url instanceof URL ? url : url.url);
       const body = JSON.parse(String(init?.body ?? "{}"));
       calls.push({ host: u.host, body });
-      if (u.host === "api.groq.com") return json(429, { error: { message: "rate limited" } });
       const hasToolResult = body.messages.some((m: { role: string }) => m.role === "tool");
       return hasToolResult
         ? completion({ role: "assistant", content: "Ugu has 2.1 mg iron per 100 g (FAO/INFOODS WAFCT 2019)." })
@@ -43,21 +42,19 @@ describe("sous-chef provider chain", () => {
     });
     const { askWithFallback } = await import("./chatChain");
     const out = await askWithFallback({} as never, ctx, [{ role: "user", content: "Is ugu high in iron?" }]);
-    expect(out.provider).toBe("openrouter");
-    expect(out.skipped[0]).toMatch(/^groq: HTTP 429/);
+    expect(out.provider).toBe("groq");
     expect(out.text).toContain("2.1 mg");
     expect(runTool).toHaveBeenCalledWith({}, ctx, "lookup_ingredient_facts", { name: "ugu" });
-    const or = calls.filter((c) => c.host === "openrouter.ai");
-    expect(or[0].body.provider).toEqual({ data_collection: "deny" });
-    expect(String((or[0].body.messages as { content: string }[])[0].content)).toContain("peanut");
-    expect((or[0].body.tools as unknown[]).length).toBe(4);
+    expect(calls.every((c) => c.host === "api.groq.com")).toBe(true);
+    expect(String((calls[0].body.messages as { content: string }[])[0].content)).toContain("peanut");
+    expect((calls[0].body.tools as unknown[]).length).toBe(4);
   });
 
-  it("ends with Claude when every open-weight provider fails", async () => {
-    vi.stubGlobal("fetch", async () => json(503, { error: { message: "down" } }));
+  it("falls back to Claude when Groq is rate-limited", async () => {
+    vi.stubGlobal("fetch", async () => json(429, { error: { message: "rate limited" } }));
     const { askWithFallback } = await import("./chatChain");
     const out = await askWithFallback({} as never, ctx, [{ role: "user", content: "hi" }]);
     expect(out.provider).toBe("anthropic");
-    expect(out.skipped).toHaveLength(2);
+    expect(out.skipped).toEqual(["groq: HTTP 429"]);
   });
 });

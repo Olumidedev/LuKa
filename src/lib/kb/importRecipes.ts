@@ -1,6 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { generateStructured, untrusted } from "../ai/gateway";
+import { generateBatchStructured } from "../ai/batch";
+import { untrusted } from "../ai/gateway";
 import { SYSTEM } from "../ai/prompts";
 import { SingleRecipeOut } from "../ai/schemas";
 import { withRun } from "../connectors/runs";
@@ -55,7 +56,7 @@ export async function adaptAndSubmit(db: SupabaseClient, a: Adapt, vocab?: { app
   ]
     .filter(Boolean)
     .join("\n\n");
-  const out = await generateStructured({
+  const out = await generateBatchStructured({
     schema: SingleRecipeOut,
     system: SYSTEM,
     prompt: `${INSTRUCTIONS[a.mode]}
@@ -63,7 +64,6 @@ Use LUKA's canonical ingredients wherever they fit, with exactly these ids: ${kb
 Set countries to ["${a.country}"] and credit to "".
 
 ${untrusted(a.facts.sourceUrl, source.slice(0, 12000))}`,
-    effort: "low",
   });
   const r = out.recipe;
   const names = new Map(kb.map((k) => [k.app_key, k.canonical_name]));

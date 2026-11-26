@@ -2,7 +2,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { withRun } from "../connectors/runs";
 import { ALL_COUNTRIES } from "../data/countries";
-import { generateStructured } from "../ai/gateway";
+import { generateBatchStructured } from "../ai/batch";
 import { SYSTEM } from "../ai/prompts";
 import { RecipeBatchOut } from "../ai/schemas";
 import { ingestRecipeSubmission, toPositionalSteps } from "./intake";
@@ -33,14 +33,13 @@ export async function runWeeklyGapAgent(db: SupabaseClient, opts: { minSelection
         const { data: existing } = await db.from("recipes").select("title").contains("cuisine_tags", [g.cuisine]).limit(100);
         const { data: queued } = await db.from("recipe_submissions").select("normalized_recipe->>title").in("status", ["pending_review", "needs_ingredient_mapping"]).limit(500);
         const avoid = [...(existing ?? []).map((r) => r.title as string), ...((queued ?? []) as { title: string }[]).map((r) => r.title)];
-        const out = await generateStructured({
+        const out = await generateBatchStructured({
           schema: RecipeBatchOut,
           system: SYSTEM,
           prompt: `Write ${opts.perCuisine ?? 4} everyday home recipes from ${g.cuisine}, spread across breakfast, lunch and dinner. Respect the dish's own name and tradition; don't relabel it as a generic or another country's dish.
 Use LUKA's canonical ingredients wherever they fit, with exactly these ids: ${vocab}. Only add a new ingredient when the dish truly needs it, and name it plainly.
 ${avoid.length ? `Don't repeat: ${avoid.slice(0, 80).join("; ")}.` : ""}
 Set countries to ["${g.cuisine}"].`,
-          effort: "medium",
         });
         const ids: string[] = [];
         for (const r of out.recipes) {

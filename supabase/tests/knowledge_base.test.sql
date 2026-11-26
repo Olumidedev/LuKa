@@ -192,4 +192,14 @@ do $$ begin
   exception when check_violation then null;
   end;
 end $$;
+
+-- 12. Embeddings: 1024-d vectors drive the similarity score; editing a recipe clears its vector.
+do $$
+declare v extensions.vector(1024) := (select array_agg(case when i = 1 then 1.0 else 0.0 end)::extensions.vector(1024) from generate_series(1, 1024) i);
+begin
+  update public.recipes set embedding = v, embedding_model = 'bge-m3' where id in ('ng_dodo', 'vn_bun');
+  assert (select (reasons ->> 'embedding_similarity')::numeric from public.find_similar_dishes('ng_dodo', false, 80) where recipe_id = 'vn_bun') = 1, 'identical vectors score 1';
+  update public.recipes set title = 'Dodo (fried ripe plantain)' where id = 'ng_dodo';
+  assert (select embedding is null and embedding_model is null from public.recipes where id = 'ng_dodo'), 'edited recipe is re-embedded';
+end $$;
 \echo ALL KNOWLEDGE BASE TESTS PASSED

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { syncNutrition } from "@/lib/connectors/nutrition";
 import { syncStatcanPrices } from "@/lib/connectors/statcan";
+import { runEmbeddingJob } from "@/lib/kb/embeddings";
 import { authorizeJob } from "@/lib/server/cron";
 import { supabaseAdmin } from "@/lib/server/supabaseAdmin";
 
@@ -29,6 +30,7 @@ async function run(req: Request) {
   if (job === "all" || job === "prices") await attempt("prices", () => syncStatcanPrices(db, { months: 3 }));
   if (job === "all" || job === "cnf") await attempt("cnf", () => syncNutrition(db, { source: "hc_cnf", limit: 140 }));
   if ((job === "all" || job === "fdc") && process.env.USDA_FDC_API_KEY) await attempt("fdc", () => syncNutrition(db, { source: "usda_fdc", limit: 140, apiKey: process.env.USDA_FDC_API_KEY }));
+  if ((job === "all" || job === "embed") && process.env.CLOUDFLARE_AI_TOKEN) await attempt("embed", () => runEmbeddingJob(db, { limit: 300 }));
   return NextResponse.json(out);
 }
 export const GET = run;

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { batchProvider } from "@/lib/ai/batch";
 import { aiConfigured } from "@/lib/ai/gateway";
 import { importFromMealDb, importFromWikibooks, importPublicDomain } from "@/lib/kb/importRecipes";
 import { requireUser } from "@/lib/server/auth";
@@ -12,7 +13,7 @@ export async function POST(req: Request) {
   const user = await requireUser(req);
   if (!user?.isAdmin) return NextResponse.json({ error: "Admins only." }, { status: 403 });
   const db = supabaseAdmin();
-  if (!db || !aiConfigured()) return NextResponse.json({ error: "Needs Supabase and the Claude key." }, { status: 503 });
+  if (!db || (!aiConfigured() && batchProvider() !== "ollama")) return NextResponse.json({ error: "Needs Supabase and a model (Claude key or Ollama)." }, { status: 503 });
   const b = (await req.json().catch(() => ({}))) as Record<string, unknown>;
   const limit = Math.max(1, Math.min(6, Number(b.limit) || 3));
   try {

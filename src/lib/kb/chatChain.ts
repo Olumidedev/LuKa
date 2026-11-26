@@ -6,8 +6,9 @@ import { AIError, aiConfigured } from "../ai/gateway";
 import { SYSTEM, TOOLS, askSousChef, runTool, type ChatTurn, type SousChefContext } from "./sousChef";
 
 /**
- * Sous-chef provider chain. Fast open-weight models first (Groq), with
- * automatic fallback when one is rate-limited or down, ending with Claude.
+ * Sous-chef provider chain: Groq's free tier first (no card; Groq doesn't
+ * train on API data, and Zero Data Retention can be switched on in its
+ * console), then Claude if Groq is rate-limited or down.
  * Every provider gets the same read-only tools and the same rules: facts
  * (nutrition, prices, allergens) only ever come from LUKA's database, scoped
  * to the household's region and allergen exclusions.
@@ -15,16 +16,13 @@ import { SYSTEM, TOOLS, askSousChef, runTool, type ChatTurn, type SousChefContex
  * Only the conversation and those constraints are sent; never names,
  * members' details or anything else from the household.
  */
-export type ProviderId = "groq" | "cerebras" | "openrouter" | "anthropic";
+export type ProviderId = "groq" | "anthropic";
 
 interface OpenAIProvider {
   id: Exclude<ProviderId, "anthropic">;
   baseURL: string;
   key: string | undefined;
   model: string;
-  /** Extra request fields (OpenRouter: refuse providers that keep or train on prompts). */
-  extra?: Record<string, unknown>;
-  headers?: Record<string, string>;
 }
 
 function openAIProviders(): Record<OpenAIProvider["id"], OpenAIProvider> {
@@ -36,25 +34,11 @@ function openAIProviders(): Record<OpenAIProvider["id"], OpenAIProvider> {
       // Groq has deprecated llama-3.3-70b-versatile in favour of gpt-oss-120b; override with GROQ_MODEL.
       model: process.env.GROQ_MODEL || "openai/gpt-oss-120b",
     },
-    cerebras: {
-      id: "cerebras",
-      baseURL: "https://api.cerebras.ai/v1",
-      key: process.env.CEREBRAS_API_KEY,
-      model: process.env.CEREBRAS_MODEL || "gpt-oss-120b",
-    },
-    openrouter: {
-      id: "openrouter",
-      baseURL: "https://openrouter.ai/api/v1",
-      key: process.env.OPENROUTER_API_KEY,
-      model: process.env.OPENROUTER_MODEL || "openai/gpt-oss-120b:free",
-      extra: { provider: { data_collection: "deny" } },
-      headers: { "HTTP-Referer": "https://luka-delta.vercel.app", "X-Title": "LUKA" },
-    },
   };
 }
 
 export function chainOrder(): ProviderId[] {
-  const wanted = (process.env.SOUSCHEF_PROVIDERS || "groq,cerebras,openrouter,anthropic").split(",").map((s) => s.trim()) as ProviderId[];
+  const wanted = (process.env.SOUSCHEF_PROVIDERS || "groq,anthropic").split(",").map((s) => s.trim()) as ProviderId[];
   const p = openAIProviders();
   return wanted.filter((id) => (id === "anthropic" ? aiConfigured() : !!p[id as OpenAIProvider["id"]]?.key));
 }
@@ -67,7 +51,7 @@ const OPENAI_TOOLS: ChatCompletionTool[] = TOOLS.map((t) => ({
 }));
 
 async function askOpenAICompatible(p: OpenAIProvider, db: SupabaseClient, ctx: SousChefContext, history: ChatTurn[]) {
-  const client = new OpenAI({ apiKey: p.key, baseURL: p.baseURL, timeout: 25_000, maxRetries: 0, defaultHeaders: p.headers });
+  const client = new OpenAI({ apiKey: p.key, baseURL: p.baseURL, timeout: 25_000, maxRetries: 0 });
   const messages: ChatCompletionMessageParam[] = [{ role: "system", content: SYSTEM(ctx) }, ...history.map((t) => ({ role: t.role, content: t.content }) as ChatCompletionMessageParam)];
   const toolsUsed: string[] = [];
   for (let round = 0; round < 6; round++) {
@@ -78,7 +62,6 @@ async function askOpenAICompatible(p: OpenAIProvider, db: SupabaseClient, ctx: S
       tool_choice: "auto",
       temperature: 0.3,
       max_tokens: 1200,
-      ...(p.extra ?? {}),
     } as OpenAI.Chat.ChatCompletionCreateParamsNonStreaming);
     const msg = res.choices[0]?.message;
     if (!msg) throw new Error("empty response");

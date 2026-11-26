@@ -56,22 +56,60 @@ export const STORE_NAME_PATTERN: Record<StoreKind, string> = {
   middle_eastern: "halal|middle east|arab|persian|iran|turk|leban|levant|afghan|mediterr",
 };
 
-/** OpenStreetMap `cuisine=*` values per region, for restaurants. */
-const REGION_CUISINES: Record<string, string> = {
-  "West Africa": "african|west_african|nigerian|ghanaian|senegalese|ivorian|liberian|sierra_leonean",
-  "Central Africa": "african|cameroonian|congolese",
-  "East Africa": "african|ethiopian|eritrean|somali|kenyan|ugandan|tanzanian",
-  "Southern Africa": "african|south_african|zimbabwean",
-  "North Africa": "moroccan|algerian|tunisian|egyptian|libyan|north_african",
-  Caribbean: "caribbean|jamaican|trinidadian|haitian|cuban|dominican|puerto_rican|barbadian|guyanese",
-  "Mexico & Central America": "mexican|salvadoran|guatemalan|honduran|latin_american",
-  "South America": "brazilian|colombian|peruvian|venezuelan|argentinian|chilean|ecuadorian|latin_american",
-  "Middle East & Levant": "lebanese|syrian|turkish|persian|iranian|iraqi|palestinian|middle_eastern|arab|kebab|falafel",
-  "South Asia": "indian|pakistani|bangladeshi|sri_lankan|nepalese|afghan",
-  "East Asia": "chinese|japanese|korean|taiwanese|cantonese|sushi|ramen",
-  "Southeast Asia": "thai|vietnamese|filipino|indonesian|malaysian|singaporean|cambodian|laotian|burmese",
-  "Central Asia": "uzbek|kazakh|central_asian",
-  "Mediterranean Europe": "italian|greek|spanish|portuguese|pizza",
+/** Geoapify restaurant categories (catering.restaurant.*) per region. */
+const REGION_CUISINES: Record<string, string[]> = {
+  "West Africa": ["african"],
+  "Central Africa": ["african"],
+  "East Africa": ["african", "ethiopian"],
+  "Southern Africa": ["african"],
+  "North Africa": ["moroccan", "arab", "mediterranean"],
+  Caribbean: ["caribbean", "jamaican", "cuban"],
+  "Mexico & Central America": ["mexican", "tacos", "latin_american"],
+  "South America": ["brazilian", "peruvian", "argentinian", "bolivian", "latin_american"],
+  "Middle East & Levant": ["lebanese", "syrian", "persian", "turkish", "arab", "kebab"],
+  "South Asia": ["indian", "pakistani", "nepalese", "afghan", "curry"],
+  "East Asia": ["chinese", "japanese", "korean", "taiwanese", "dumpling", "ramen"],
+  "Southeast Asia": ["thai", "vietnamese", "filipino", "indonesian", "malaysian", "malay"],
+  "Central Asia": ["uzbek"],
+  "Mediterranean Europe": ["italian", "greek", "spanish", "portuguese", "mediterranean"],
+  "Western & Northern Europe": ["french", "german", "irish", "belgian", "swedish", "danish", "european"],
+  "Eastern Europe & Caucasus": ["russian", "ukrainian", "georgian", "hungarian", "czech", "balkan"],
+  "North America": ["american", "barbecue"],
+  "Oceania & Pacific": ["hawaiian"],
+};
+
+/** Country picks whose own cuisine has a Geoapify category. */
+const COUNTRY_CUISINE: Record<string, string> = {
+  Jamaica: "jamaican",
+  Ethiopia: "ethiopian",
+  Cuba: "cuban",
+  Mexico: "mexican",
+  Brazil: "brazilian",
+  Peru: "peruvian",
+  Lebanon: "lebanese",
+  Syria: "syrian",
+  Iran: "persian",
+  Turkey: "turkish",
+  India: "indian",
+  Pakistan: "pakistani",
+  Nepal: "nepalese",
+  Afghanistan: "afghan",
+  China: "chinese",
+  Japan: "japanese",
+  "South Korea": "korean",
+  Taiwan: "taiwanese",
+  Thailand: "thai",
+  Vietnam: "vietnamese",
+  Philippines: "filipino",
+  Indonesia: "indonesian",
+  Malaysia: "malaysian",
+  Morocco: "moroccan",
+  Italy: "italian",
+  Greece: "greek",
+  Spain: "spanish",
+  Portugal: "portuguese",
+  France: "french",
+  Germany: "german",
 };
 
 const REGION_STORE: Record<string, StoreKind> = {
@@ -95,11 +133,11 @@ function pickRegions(picks: CuisinePick[]): string[] {
   return [...new Set(picks.map((p) => (p.type === "region" ? p.value : regionOf(p.value))).filter((x): x is string => !!x))];
 }
 
-/** Restaurant cuisine tags for a household's picks (country names add their own demonym when OSM uses it). */
-export function cuisineTags(picks: CuisinePick[]): string[] {
-  const own = picks.filter((p) => p.type === "country").map((p) => p.value.toLowerCase().replace(/\s+/g, "_"));
-  const fromRegions = pickRegions(picks).flatMap((r) => (REGION_CUISINES[r] ?? "").split("|")).filter(Boolean);
-  return [...new Set([...fromRegions, ...own])].slice(0, 40);
+/** Geoapify restaurant categories for cuisine picks, most specific first. */
+export function restaurantCategories(picks: CuisinePick[]): string[] {
+  const own = picks.filter((p) => p.type === "country").map((p) => COUNTRY_CUISINE[p.value]).filter((x): x is string => !!x);
+  const fromRegions = pickRegions(picks).flatMap((r) => REGION_CUISINES[r] ?? []);
+  return [...new Set([...own, ...fromRegions])].slice(0, 8).map((c) => `catering.restaurant.${c}`);
 }
 
 /** Which kinds of specialty grocer serve a household's cuisines and this list's hard-to-find items. */

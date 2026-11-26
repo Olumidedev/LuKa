@@ -1,64 +1,51 @@
 import { describe, expect, it } from "vitest";
-import { cuisineTags, storeKinds } from "../data/specialty";
-import { coarse, fromGoogle, overpassQuery, parseOverpass } from "./places";
+import { restaurantCategories, storeKinds } from "../data/specialty";
+import { cellCenter, cellKey, coarse, geoapifyUrl, namePattern, parseGeoapify, toPlace } from "./places";
 
-describe("nearby places", () => {
+describe("nearby places (Geoapify + cache)", () => {
   it("rounds location to about a kilometre", () => {
     expect(coarse(43.653226)).toBe(43.65);
     expect(coarse(-79.383184)).toBe(-79.38);
   });
-  it("maps a Nigerian + Jamaican household to grocers and restaurant cuisines", () => {
+  it("puts nearby searches in the same cache cell", () => {
+    expect(cellKey("grocer", "all", 43.651, -79.381)).toBe(cellKey("grocer", "all", 43.66, -79.36));
+    expect(cellKey("grocer", "all", 43.651, -79.381)).not.toBe(cellKey("grocer", "all", 43.72, -79.381));
+    expect(cellCenter(43.651, -79.381)).toEqual({ lat: 43.675, lon: -79.375 });
+  });
+  it("maps a Nigerian + Jamaican household to grocers and restaurant categories", () => {
     const picks = [{ type: "country" as const, value: "Nigeria" }, { type: "country" as const, value: "Jamaica" }];
     expect(storeKinds(picks, ["ugu", "gochujang"])).toEqual(["african", "caribbean", "asian"]);
-    const tags = cuisineTags(picks);
-    expect(tags).toContain("nigerian");
-    expect(tags).toContain("jamaican");
+    expect(restaurantCategories(picks)).toEqual(["catering.restaurant.jamaican", "catering.restaurant.african", "catering.restaurant.caribbean", "catering.restaurant.cuban"]);
   });
-  it("builds Overpass queries with coarse coordinates and no injection", () => {
-    const q = overpassQuery("grocers", 43.653226, -79.383184, { kinds: ["african"] });
-    expect(q).toContain("around:12000,43.65,-79.38");
-    expect(q).toContain('["name"~"afric|afro');
-    const bad = overpassQuery("restaurants", 1, 2, { cuisines: ['x"];out;(node'] });
-    expect(bad).not.toContain('"];out;(');
-    expect(overpassQuery("grocers", 1, 2, { kinds: [] })).toBe("");
+  it("asks Geoapify for one cell, with the key only in the server URL", () => {
+    const u = new URL(geoapifyUrl("restaurant", ["catering.restaurant.african"], 43.651, -79.381, "KEY"));
+    expect(u.host).toBe("api.geoapify.com");
+    expect(u.searchParams.get("filter")).toBe("circle:-79.375,43.675,10500");
+    expect(u.searchParams.get("limit")).toBe("500");
   });
-  it("parses Overpass results, nearest first, deduplicated", () => {
-    const from = { lat: 43.65, lon: -79.38 };
-    const places = parseOverpass(
+  it("parses Geoapify features into cache rows", () => {
+    const rows = parseGeoapify(
       {
-        elements: [
-          { type: "node", id: 1, lat: 43.7, lon: -79.4, tags: { name: "Far African Market", shop: "supermarket" } },
-          { type: "way", id: 2, center: { lat: 43.66, lon: -79.38 }, tags: { name: "Naija Foods", shop: "convenience", "addr:housenumber": "12", "addr:street": "Queen St" } },
-          { type: "node", id: 3, lat: 43.66, lon: -79.38, tags: { name: "Naija Foods" } },
-          { type: "node", id: 4, lat: 43.66, lon: -79.38, tags: {} },
+        features: [
+          { properties: { place_id: "p1", name: "Roywoods", categories: ["catering", "catering.restaurant", "catering.restaurant.jamaican"], address_line2: "12 Queen St, Toronto", website: "https://roywoods.example", lat: 43.651, lon: -79.381 } },
+          { properties: { place_id: "p1", name: "Roywoods", lat: 43.651, lon: -79.381 } },
+          { properties: { place_id: "p2", lat: 1, lon: 2 } },
+          { properties: { place_id: "p3", name: "No coords" } },
+          { properties: { place_id: "p4", name: "Bad site", website: "javascript:alert(1)" }, geometry: { type: "Point", coordinates: [-79.4, 43.6] } },
         ],
       },
-      "grocers",
-      from,
+      "restaurant",
     );
-    expect(places.map((p) => p.name)).toEqual(["Naija Foods", "Far African Market"]);
-    expect(places[0].address).toBe("12 Queen St");
-    expect(places[0].url).toBe("https://www.openstreetmap.org/way/2");
-    expect(places[0].distanceKm).toBeCloseTo(1.1, 1);
+    expect(rows.map((r) => r.id)).toEqual(["geoapify:p1", "geoapify:p4"]);
+    expect(rows[1].geom).toBe("SRID=4326;POINT(-79.4 43.6)");
+    expect(rows[1].website).toBeNull();
   });
-  it("reads Google Places (New) results", () => {
-    const p = fromGoogle({ id: "abc", displayName: { text: "Jamaica Patty Co" }, location: { latitude: 43.66, longitude: -79.38 }, googleMapsUri: "https://maps.google.com/?cid=1" }, "restaurant", { lat: 43.65, lon: -79.38 });
-    expect(p?.source).toBe("google");
-    expect(p?.url).toBe("https://maps.google.com/?cid=1");
-  });
-});
-
-describe("searchOsm", () => {
-  it("falls back to a mirror when the main instance refuses", async () => {
-    const { searchOsm } = await import("./places");
-    const hosts: string[] = [];
-    const fake = (async (url: string) => {
-      hosts.push(new URL(url).host);
-      if (hosts.length === 1) return new Response("no", { status: 406 });
-      return new Response(JSON.stringify({ elements: [{ type: "node", id: 9, lat: 43.66, lon: -79.38, tags: { name: "Roywoods", cuisine: "caribbean;jamaican" } }] }), { status: 200 });
-    }) as typeof fetch;
-    const out = await searchOsm("restaurants", 43.6532, -79.3832, { cuisines: ["jamaican"] }, fake);
-    expect(hosts).toEqual(["overpass-api.de", "overpass.private.coffee"]);
-    expect(out[0].tags).toEqual(["caribbean", "jamaican"]);
+  it("builds a safe name pattern and readable places", () => {
+    expect(namePattern(["african"])).toMatch(/^afric\|afro/);
+    expect(namePattern([])).toBeNull();
+    const p = toPlace({ id: "geoapify:p1", name: "Roywoods", categories: ["catering.restaurant", "catering.restaurant.jamaican"], lat: 43.651, lon: -79.381, distance_m: 1234, address: null, website: null }, "restaurant");
+    expect(p.distanceKm).toBe(1.2);
+    expect(p.tags).toEqual(["jamaican"]);
+    expect(p.url).toContain("openstreetmap.org");
   });
 });
