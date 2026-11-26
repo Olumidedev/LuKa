@@ -10,7 +10,7 @@ import type { MealType, PlateRole } from "../types";
  * checks never approve anything — a human does, in Admin → Review queue.
  */
 
-export type SourceChannel = "family_share" | "partner_feed" | "permitted_open_source" | "weekly_gap_agent";
+export type SourceChannel = "family_share" | "partner_feed" | "permitted_open_source" | "public_domain" | "reference_import" | "weekly_gap_agent";
 export type OriginType = "built_in" | "claude" | "user" | "partner";
 
 export interface RawIngredient {
@@ -37,6 +37,11 @@ export interface RawRecipeSubmission {
   batch?: boolean;
   credit?: string;
   origin_ref?: string;
+  /** Licence of the published recipe (e.g. "CC BY-SA 4.0", "Public domain"). */
+  license?: string;
+  /** Attribution line shown with the recipe. */
+  attribution?: string;
+  source_url?: string;
   ingredients: RawIngredient[];
   /** May reference ingredients as {@N} (1-based) so quantities scale in Cook Mode. */
   steps: string[];
@@ -137,6 +142,9 @@ export async function ingestRecipeSubmission(db: SupabaseClient, input: IntakeIn
     servings: raw.servings ?? 4,
     credit: raw.credit ?? null,
     origin_ref: raw.origin_ref ?? null,
+    license: raw.license ?? null,
+    attribution: raw.attribution ?? null,
+    source_url: raw.source_url ?? null,
     ingredients,
     steps: raw.steps.map((s) => s.slice(0, 800)).slice(0, 25),
     app_recipe: {

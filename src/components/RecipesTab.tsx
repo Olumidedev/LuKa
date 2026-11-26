@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { ALL_COUNTRIES } from "@/lib/data/countries";
-import { aiGenerateRecipes, aiParseRecipe, call, useAIEnabled, type AIRecipes } from "@/lib/ai/client";
+import { aiGenerateRecipes, aiImportUrl, aiParseRecipe, call, useAIEnabled, type AIRecipes } from "@/lib/ai/client";
 import { useCloud } from "@/lib/cloud/sync";
 import { normalizeRecipe, parseIngredientLine } from "@/lib/ai/normalize";
 import { track } from "@/lib/analytics";
@@ -138,7 +138,7 @@ function useSaveRecipes(shared = false) {
 function AddRecipeSheet({ open, onClose, ai }: { open: boolean; onClose: () => void; ai: boolean }) {
   const save = useSaveRecipes();
   const toast = useToast();
-  const [mode, setMode] = useState<"paste" | "manual">(ai ? "paste" : "manual");
+  const [mode, setMode] = useState<"link" | "paste" | "manual">(ai ? "link" : "manual");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [text, setText] = useState("");
@@ -165,10 +165,10 @@ function AddRecipeSheet({ open, onClose, ai }: { open: boolean; onClose: () => v
 
   const submit = async () => {
     setErr("");
-    if (effMode === "paste") {
+    if (effMode === "link" || effMode === "paste") {
       setBusy(true);
       try {
-        save(await aiParseRecipe(text, credit || undefined, url || undefined));
+        save(effMode === "link" ? await aiImportUrl(url) : await aiParseRecipe(text, credit || undefined, url || undefined));
         reset();
       } catch (e) {
         setErr(e instanceof Error ? e.message : "That didn't work.");
@@ -225,17 +225,18 @@ function AddRecipeSheet({ open, onClose, ai }: { open: boolean; onClose: () => v
         <div className="flex items-center justify-between gap-3">
           <span className="text-[13px] text-danger">{err}</span>
           <Button variant="primary" onClick={submit} disabled={busy}>
-            {busy ? "Reading recipe…" : "Save recipe"}
+            {busy ? (effMode === "link" ? "Reading the page…" : "Reading recipe…") : "Save recipe"}
           </Button>
         </div>
       }
     >
       <div className="grid gap-4">
         {ai ? (
-          <Segmented<"paste" | "manual">
+          <Segmented<"link" | "paste" | "manual">
             value={mode}
             onChange={setMode}
             options={[
+              { value: "link", label: "From a link" },
               { value: "paste", label: "Paste from anywhere" },
               { value: "manual", label: "Type it in" },
             ]}
@@ -243,7 +244,13 @@ function AddRecipeSheet({ open, onClose, ai }: { open: boolean; onClose: () => v
         ) : (
           <p className="rounded-2xl bg-sunk p-3 text-[13px] text-muted">Pasting a blog post or video transcript needs the AI service (add a Claude key on the server). Typing a recipe in works now.</p>
         )}
-        {effMode === "paste" ? (
+        {effMode === "link" ? (
+          <div className="grid gap-2">
+            <Label htmlFor="r-link">Recipe page</Label>
+            <input id="r-link" type="url" inputMode="url" className={inputCls} value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://…" />
+            <p className="text-[13px] text-muted">Saved to your household only, with a link back to the page. For a video, paste its description instead.</p>
+          </div>
+        ) : effMode === "paste" ? (
           <>
             <div>
               <Label htmlFor="paste">Recipe text</Label>
@@ -301,7 +308,7 @@ function AddRecipeSheet({ open, onClose, ai }: { open: boolean; onClose: () => v
             )}
           </>
         )}
-        <div className="grid gap-3 sm:grid-cols-2">
+        {effMode !== "link" && <div className="grid gap-3 sm:grid-cols-2">
           <div>
             <Label htmlFor="r-credit">Credit (who it&apos;s from)</Label>
             <input id="r-credit" className={inputCls} value={credit} onChange={(e) => setCredit(e.target.value)} placeholder="Grandma Bisi, or a cookbook page" />
@@ -310,7 +317,7 @@ function AddRecipeSheet({ open, onClose, ai }: { open: boolean; onClose: () => v
             <Label htmlFor="r-url">Link (optional)</Label>
             <input id="r-url" className={inputCls} value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://…" />
           </div>
-        </div>
+        </div>}
       </div>
     </Sheet>
   );

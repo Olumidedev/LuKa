@@ -20,11 +20,11 @@ interface Submission {
   license_notes: string | null;
   status: "pending_review" | "needs_ingredient_mapping";
   created_at: string;
-  normalized_recipe: { title: string; summary: string | null; cuisine_tags: string[]; ingredients: SubIngredient[]; steps: string[]; credit: string | null; origin_ref: string | null };
+  normalized_recipe: { title: string; summary: string | null; cuisine_tags: string[]; ingredients: SubIngredient[]; steps: string[]; credit: string | null; origin_ref: string | null; license?: string | null; attribution?: string | null; source_url?: string | null };
   automated_checks: { unresolved?: string[]; allergens?: string[]; allergen_mismatch?: string[]; problems?: string[]; warnings?: string[] };
 }
 
-const CHANNEL: Record<string, string> = { family_share: "Family share", partner_feed: "Partner feed", permitted_open_source: "Open source", weekly_gap_agent: "Gap agent (Claude)" };
+const CHANNEL: Record<string, string> = { family_share: "Family share", partner_feed: "Partner feed", permitted_open_source: "Open licence", public_domain: "Public domain", reference_import: "Facts + LUKA method", weekly_gap_agent: "Gap agent (Claude)" };
 const CATEGORIES = ["produce", "protein", "dairy", "bakery", "grains", "canned", "condiments", "spices", "oils"];
 const ALLERGENS = ["gluten", "dairy", "egg", "peanut", "treenut", "fish", "shellfish", "soy", "sesame", "mustard"];
 
@@ -56,6 +56,13 @@ export function AdminReviewQueue() {
     toast({ text: `${s.normalized_recipe.title} is live for everyone.` });
     await Promise.all([load(), catalog.refresh()]);
   };
+  const confirmLicence = async (s: Submission) => {
+    const why = window.prompt("How do you know it's licensed? (e.g. “Published 1885”, “Partner agreement 2026-11”)");
+    if (!why?.trim()) return;
+    const { error } = await getSupabase()!.rpc("confirm_submission_license", { p_submission_id: s.id, p_license_notes: why.trim().slice(0, 300) });
+    if (error) return toast({ text: error.message });
+    load();
+  };
   const reject = async (s: Submission) => {
     const { error } = await getSupabase()!.rpc("reject_recipe_submission", { p_submission_id: s.id });
     if (error) return toast({ text: error.message });
@@ -76,7 +83,8 @@ export function AdminReviewQueue() {
           const r = s.normalized_recipe;
           const c = s.automated_checks ?? {};
           const unresolved = r.ingredients.filter((i) => !i.ingredient_id);
-          const needsLicence = (s.origin_type === "partner" || s.source_channel === "permitted_open_source") && !s.license_verified;
+          const licensed = s.origin_type === "partner" || ["partner_feed", "permitted_open_source", "public_domain"].includes(s.source_channel);
+          const needsLicence = licensed && !s.license_verified;
           return (
             <li key={s.id} className="grid gap-3 rounded-3xl border border-line bg-surface p-5">
               <div className="flex flex-wrap items-start gap-2">
@@ -88,7 +96,7 @@ export function AdminReviewQueue() {
                   </p>
                 </div>
                 <Tag tone={s.origin_type === "claude" ? "saffron" : "neutral"}>{CHANNEL[s.source_channel] ?? s.source_channel}</Tag>
-                {s.origin_type === "partner" || s.source_channel === "permitted_open_source" ? (
+                {licensed ? (
                   <Tag tone={s.license_verified ? "leaf" : "danger"}>{s.license_verified ? "Licence verified" : "Licence not verified"}</Tag>
                 ) : (
                   <Tag>{s.origin_type === "user" ? "Shared with consent" : "No licence needed"}</Tag>
@@ -104,6 +112,26 @@ export function AdminReviewQueue() {
                 </ul>
               ) : null}
               {!!c.allergens?.length && <p className="text-[13px]">Allergens: {c.allergens.join(", ")}</p>}
+              {(r.license || r.source_url || s.license_notes) && (
+                <p className="text-[13px] text-muted">
+                  {r.attribution ?? r.credit}
+                  {r.license && ` · ${r.license}`}
+                  {r.source_url && (
+                    <>
+                      {" · "}
+                      <a className="underline" href={r.source_url} target="_blank" rel="noopener noreferrer">
+                        source
+                      </a>
+                    </>
+                  )}
+                  {s.license_notes && <span className="block">{s.license_notes}</span>}
+                </p>
+              )}
+              {needsLicence && (
+                <Button size="sm" className="justify-self-start" onClick={() => confirmLicence(s)}>
+                  I&apos;ve checked the licence
+                </Button>
+              )}
 
               {unresolved.map((i) => (
                 <IngredientMapper key={i.raw_name} submissionId={s.id} rawName={i.raw_name} onMapped={load} />

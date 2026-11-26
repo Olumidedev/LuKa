@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { call } from "@/lib/ai/client";
 import { getSupabase } from "@/lib/cloud/supabase";
 import { Button, Tag, useToast } from "../ui";
+import { ImportPanel } from "./ImportPanel";
 
 interface Run {
   id: string;
@@ -86,6 +87,8 @@ export function DataSection() {
           </Button>
         ))}
       </div>
+
+      <ImportPanel onDone={load} />
 
       <section className="grid gap-3">
         <h2 className="text-lg font-semibold">Matches to check ({links.length})</h2>

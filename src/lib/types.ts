@@ -97,7 +97,7 @@ export interface Recipe {
    * for a 12-minute timer.
    */
   steps: string[];
-  source: { type: "library" | "ai" | "user"; credit?: string; url?: string };
+  source: { type: "library" | "ai" | "user"; credit?: string; url?: string; license?: string };
   /** Where this dish sits on a plate. Sides and bases aren't scheduled alone; they pair with mains. */
   plateRole?: PlateRole;
   /** Cross-cultural family this dish belongs to (e.g. "fried-ripe-plantain"). */

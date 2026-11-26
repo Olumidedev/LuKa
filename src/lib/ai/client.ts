@@ -83,3 +83,8 @@ export async function aiScanFridge(file: File): Promise<PantryItem[]> {
   const out = await call<{ items: PantryItem[] }>("/api/ai/fridge", { method: "POST", body: form });
   return out.items;
 }
+
+/** Saves a recipe from a web page into this household's own (private) recipes. */
+export function aiImportUrl(url: string) {
+  return call<AIRecipes>("/api/recipes/import-url", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ url }) });
+}

@@ -157,4 +157,39 @@ begin
   assert (select def ->> 'priceSource' from public.app_ingredient_defs where key = 'tomato') = 'statcan_18100245:2026-09', 'price source reported';
   assert (select (def -> 'nutrition' ->> 'kcal')::numeric from public.app_ingredient_defs where key = 'eggs') = 72, 'per-piece nutrition restored for eggs';
 end $$;
+
+-- 11. Licence gate: public-domain submissions need a confirmed licence; licence and attribution reach the recipe.
+insert into public.recipe_submissions (id, source_channel, origin_type, license_verified, raw_payload, normalized_recipe, status) values (
+  '00000000-0000-0000-0000-00000000c002', 'public_domain', 'claude', false, '{}',
+  ('{"title":"Pepper Pot","cuisine_tags":["Jamaica"],"meals":["d"],"license":"Public domain source; LUKA adaptation","attribution":"Adapted by LUKA from an 1893 cookbook",
+    "source_url":"https://www.gutenberg.org/ebooks/1#Pepper%20Pot",
+    "ingredients":[{"raw_name":"rice","ingredient_id":"' || (select id from public.ingredients where app_key = 'rice') || '","quantity":300,"unit":"g"},
+                   {"raw_name":"onion","ingredient_id":"' || (select id from public.ingredients where app_key = 'onion') || '","quantity":1,"unit":"pc"}],
+    "steps":["Soften {@2}.","Add {@1} and simmer [t20]."],"app_recipe":{"activeMin":15,"totalMin":40,"spice":1,"batch":false,"steps":["Soften {@2}.","Add {@1} and simmer [t20]."]}}')::jsonb,
+  'pending_review');
+insert into public.recipe_submissions (source_channel, origin_type, raw_payload, normalized_recipe) values ('reference_import', 'claude', '{}', '{}');
+set role authenticated;
+select set_config('request.jwt.claim.sub', :'bob', false);
+do $$
+declare rid text;
+begin
+  begin
+    perform public.approve_recipe_submission('00000000-0000-0000-0000-00000000c002');
+    raise exception 'unverified public-domain licence must block approval';
+  exception when check_violation then null;
+  end;
+  perform public.confirm_submission_license('00000000-0000-0000-0000-00000000c002', 'Published 1893');
+  rid := public.approve_recipe_submission('00000000-0000-0000-0000-00000000c002');
+  assert (select license from public.recipes where id = rid) = 'Public domain source; LUKA adaptation', 'licence stored';
+  assert (select recipe -> 'source' ->> 'credit' from public.recipes where id = rid) = 'Adapted by LUKA from an 1893 cookbook', 'attribution shown in app';
+  assert (select recipe -> 'source' ->> 'url' from public.recipes where id = rid) like 'https://www.gutenberg.org/%', 'source link kept';
+end $$;
+reset role;
+do $$ begin
+  begin
+    insert into public.recipe_submissions (source_channel, origin_type, raw_payload, normalized_recipe) values ('scraped_blog', 'claude', '{}', '{}');
+    raise exception 'unknown channel must be rejected';
+  exception when check_violation then null;
+  end;
+end $$;
 \echo ALL KNOWLEDGE BASE TESTS PASSED

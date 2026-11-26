@@ -207,6 +207,9 @@ alter table public.recipes
   add column if not exists cook_minutes integer,
   add column if not exists servings numeric not null default 4,
   add column if not exists origin_ref text,
+  add column if not exists license text,
+  add column if not exists attribution text,
+  add column if not exists source_url text,
   add column if not exists created_by_household_id uuid references public.households (id) on delete set null,
   add column if not exists verification_status text not null default 'unverified',
   add column if not exists embedding extensions.vector(1536),
@@ -403,7 +406,7 @@ create trigger trg_sync_household_profile after insert or update of state on pub
 -- ═════════════════════════════ 5. Intake queue ═════════════════════════════
 create table if not exists public.recipe_submissions (
   id uuid primary key default gen_random_uuid(),
-  source_channel text not null check (source_channel in ('family_share', 'partner_feed', 'permitted_open_source', 'weekly_gap_agent')),
+  source_channel text not null,
   origin_type text not null check (origin_type in ('built_in', 'claude', 'user', 'partner')),
   submitted_by_household_id uuid references public.households (id) on delete set null,
   submitted_by_user_id uuid references auth.users (id) on delete set null,
@@ -420,6 +423,11 @@ create table if not exists public.recipe_submissions (
   created_at timestamptz not null default now()
 );
 create index if not exists recipe_submissions_status_idx on public.recipe_submissions (status, created_at desc);
+-- reference_import: facts (name, country, ingredient list) from a listing such as TheMealDB, method written fresh by LUKA.
+-- public_domain: out-of-copyright cookbooks (Project Gutenberg, Internet Archive, Feeding America), modernised.
+alter table public.recipe_submissions drop constraint if exists recipe_submissions_source_channel_check;
+alter table public.recipe_submissions add constraint recipe_submissions_source_channel_check
+  check (source_channel in ('family_share', 'partner_feed', 'permitted_open_source', 'public_domain', 'reference_import', 'weekly_gap_agent'));
 
 -- ═════════════════════════════ 6. Row-level security ═════════════════════════════
 do $$
@@ -820,7 +828,7 @@ begin
   if exists (select 1 from jsonb_array_elements(nr -> 'ingredients') x where x ->> 'ingredient_id' is null) then
     raise exception 'map every ingredient before approving' using errcode = '23514';
   end if;
-  if sub.source_channel in ('partner_feed', 'permitted_open_source') and not sub.license_verified then
+  if sub.source_channel in ('partner_feed', 'permitted_open_source', 'public_domain') and not sub.license_verified then
     raise exception 'confirm the licence before approving' using errcode = '23514';
   end if;
 
@@ -842,19 +850,21 @@ begin
   app := coalesce(nr -> 'app_recipe', '{}'::jsonb) || jsonb_build_object(
     'id', rid, 'name', nr ->> 'title', 'countries', coalesce(nr -> 'cuisine_tags', '[]'::jsonb), 'ingredients', app_ings,
     'meals', coalesce(nr -> 'meals', '["d"]'::jsonb), 'steps', steps_text::jsonb,
-    'source', jsonb_build_object('type', case sub.origin_type when 'claude' then 'ai' when 'user' then 'user' else 'library' end,
-                                 'credit', nr ->> 'credit'));
+    'source', jsonb_strip_nulls(jsonb_build_object('type', case sub.origin_type when 'claude' then 'ai' when 'user' then 'user' else 'library' end,
+                                 'credit', coalesce(nr ->> 'attribution', nr ->> 'credit'), 'url', nr ->> 'source_url', 'license', nr ->> 'license')));
   select coalesce(jsonb_object_agg(d.key, d.def), '{}'::jsonb) into defs
   from public.app_ingredient_defs d
   where d.key in (select x ->> 'key' from jsonb_array_elements(app_ings) x);
 
   insert into public.recipes (id, slug, title, summary, cuisine_tags, meals, recipe, app_ingredients, origin_type, origin_ref,
+                              license, attribution, source_url,
                               created_by_household_id, created_by, plate_role, flavor_tags, prep_minutes, cook_minutes, servings,
                               verification_status, status)
   values (rid, s, nr ->> 'title', nr ->> 'summary',
           array(select jsonb_array_elements_text(coalesce(nr -> 'cuisine_tags', '[]'::jsonb))),
           array(select jsonb_array_elements_text(coalesce(nr -> 'meals', '["d"]'::jsonb))),
-          app, defs, sub.origin_type, nr ->> 'origin_ref', sub.submitted_by_household_id, sub.submitted_by_user_id,
+          app, defs, sub.origin_type, nr ->> 'origin_ref', nr ->> 'license', nr ->> 'attribution', nr ->> 'source_url',
+          sub.submitted_by_household_id, sub.submitted_by_user_id,
           nr ->> 'plate_role', array(select jsonb_array_elements_text(coalesce(nr -> 'flavor_tags', '[]'::jsonb))),
           (nr ->> 'prep_minutes')::int, (nr ->> 'cook_minutes')::int, coalesce((nr ->> 'servings')::numeric, 4),
           p_verification_status, 'live');
@@ -893,6 +903,24 @@ begin
 end;
 $$;
 
+-- A reviewer confirms a source's licence (e.g. a public-domain book whose date LUKA couldn't tell).
+create or replace function public.confirm_submission_license(p_submission_id uuid, p_license_notes text)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if not public.is_admin() then raise exception 'admins only' using errcode = '42501'; end if;
+  if coalesce(btrim(p_license_notes), '') = '' then raise exception 'say why the licence is clear' using errcode = '23514'; end if;
+  update public.recipe_submissions
+     set license_verified = true, license_notes = p_license_notes || ' (confirmed ' || to_char(now(), 'YYYY-MM-DD') || ')'
+   where id = p_submission_id and status <> 'approved';
+end;
+$$;
+revoke all on function public.confirm_submission_license(uuid, text) from public, anon;
+grant execute on function public.confirm_submission_license(uuid, text) to authenticated;
+
 revoke all on function public.fn_apply_cook_feedback(), public.fn_sync_household_profile(), public.recipe_has_allergen(text, text[]),
   public.get_planner_recommendations(uuid, integer), public.find_similar_dishes(text, boolean, integer),
   public.suggest_palette_expansions(uuid, text[], integer), public.get_underserved_cuisines(integer),
@@ -914,5 +942,8 @@ insert into public.data_sources (id, name, url, license, sync_cadence) values
   ('open_food_facts', 'Open Food Facts', 'https://world.openfoodfacts.org', 'ODbL', 'weekly'),
   ('statcan_18100245', 'Statistics Canada Table 18-10-0245-01 Monthly average retail prices', 'https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1810024501', 'Statistics Canada Open Licence', 'monthly'),
   ('wikidata', 'Wikidata', 'https://www.wikidata.org', 'CC0', 'manual'),
-  ('foodon', 'FoodOn ontology', 'https://foodon.org', 'CC BY 4.0', 'manual')
+  ('foodon', 'FoodOn ontology', 'https://foodon.org', 'CC BY 4.0', 'manual'),
+  ('themealdb', 'TheMealDB (facts only: dish, country, ingredient list)', 'https://www.themealdb.com', 'Listing; methods are third-party text and are not copied', 'manual'),
+  ('wikibooks_cookbook', 'Wikibooks Cookbook', 'https://en.wikibooks.org/wiki/Cookbook:Table_of_Contents', 'CC BY-SA 4.0 (share-alike)', 'manual'),
+  ('public_domain_books', 'Public-domain cookbooks (Project Gutenberg, Internet Archive, Feeding America)', 'https://www.gutenberg.org/ebooks/bookshelf/419', 'Public domain', 'manual')
 on conflict (id) do update set name = excluded.name, url = excluded.url, license = excluded.license, sync_cadence = excluded.sync_cadence;
