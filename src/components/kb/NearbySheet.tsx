@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { call, useFeatures } from "@/lib/ai/client";
-import type { Place } from "@/lib/connectors/places";
+import { searchOsm, type Place } from "@/lib/connectors/places";
 import { track } from "@/lib/analytics";
 import type { StoreKind } from "@/lib/data/specialty";
 import { Button, Sheet } from "../ui";
@@ -46,18 +46,24 @@ export function NearbySheet({ query, onClose }: { query: NearbyQuery | null; onC
       async (pos) => {
         setState("searching");
         try {
-          const res = await call<{ places: Place[]; source: "osm" | "google" }>("/api/nearby", {
-            method: "POST",
-            headers: { "content-type": "application/json" },
-            body: JSON.stringify({ lat: coarse(pos.coords.latitude), lon: coarse(pos.coords.longitude), want: query.want, kinds: query.kinds, cuisines: query.cuisines, cuisineNames: query.cuisineNames }),
-          });
+          const lat = coarse(pos.coords.latitude);
+          const lon = coarse(pos.coords.longitude);
+          const res =
+            features.places === "google"
+              ? await call<{ places: Place[]; source: "osm" | "google" }>("/api/nearby", {
+                  method: "POST",
+                  headers: { "content-type": "application/json" },
+                  body: JSON.stringify({ lat, lon, want: query.want, kinds: query.kinds, cuisineNames: query.cuisineNames }),
+                })
+              : { places: await searchOsm(query.want, lat, lon, { kinds: query.kinds, cuisines: query.cuisines }), source: "osm" as const };
           setPlaces(res.places);
           setSource(res.source);
           setState("done");
           track("nearby_searched", { want: query.want, results: res.places.length });
         } catch (e) {
           setState("error");
-          setMsg(e instanceof Error ? e.message : "Couldn't search right now.");
+          console.warn("[nearby]", e);
+          setMsg("Couldn't search nearby right now. Google Maps works instead.");
         }
       },
       () => {
@@ -76,7 +82,7 @@ export function NearbySheet({ query, onClose }: { query: NearbyQuery | null; onC
         {state === "idle" && (
           <>
             <p className="text-sm text-muted">
-              LUKA uses your approximate location (to about 1 km) once, for this search. It isn&apos;t saved. Results come from {features.places === "google" ? "Google Maps" : "OpenStreetMap"}.
+              LUKA uses your approximate location (to about 1 km) once, for this search, and doesn&apos;t save it. {features.places === "google" ? "Results come from Google Maps." : "Your browser asks OpenStreetMap directly."}
             </p>
             <div className="flex flex-wrap gap-2">
               <Button variant="primary" onClick={search}>

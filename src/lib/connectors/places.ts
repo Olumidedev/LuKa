@@ -98,3 +98,22 @@ export function fromGoogle(p: { id: string; displayName?: { text: string }; form
     source: "google",
   };
 }
+
+/** Public Overpass instances. Run from the person's browser: shared cloud IPs get refused. */
+export const OVERPASS_HOSTS = ["https://overpass-api.de/api/interpreter", "https://overpass.private.coffee/api/interpreter", "https://maps.mail.ru/osm/tools/overpass/api/interpreter"];
+
+export async function searchOsm(want: "grocers" | "restaurants", lat: number, lon: number, opts: { kinds?: StoreKind[]; cuisines?: string[] }, fetcher: typeof fetch = fetch): Promise<Place[]> {
+  const q = overpassQuery(want, lat, lon, opts);
+  if (!q) return [];
+  const errors: string[] = [];
+  for (const host of OVERPASS_HOSTS) {
+    try {
+      const res = await fetcher(host, { method: "POST", body: new URLSearchParams({ data: q }), signal: AbortSignal.timeout(20_000) });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return parseOverpass(await res.json(), want, { lat: coarse(lat), lon: coarse(lon) });
+    } catch (e) {
+      errors.push(`${new URL(host).host}: ${e instanceof Error ? e.message : String(e)}`);
+    }
+  }
+  throw new Error(`OpenStreetMap search failed (${errors.join("; ")})`);
+}

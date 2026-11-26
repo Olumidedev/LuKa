@@ -47,3 +47,18 @@ describe("nearby places", () => {
     expect(p?.url).toBe("https://maps.google.com/?cid=1");
   });
 });
+
+describe("searchOsm", () => {
+  it("falls back to a mirror when the main instance refuses", async () => {
+    const { searchOsm } = await import("./places");
+    const hosts: string[] = [];
+    const fake = (async (url: string) => {
+      hosts.push(new URL(url).host);
+      if (hosts.length === 1) return new Response("no", { status: 406 });
+      return new Response(JSON.stringify({ elements: [{ type: "node", id: 9, lat: 43.66, lon: -79.38, tags: { name: "Roywoods", cuisine: "caribbean;jamaican" } }] }), { status: 200 });
+    }) as typeof fetch;
+    const out = await searchOsm("restaurants", 43.6532, -79.3832, { cuisines: ["jamaican"] }, fake);
+    expect(hosts).toEqual(["overpass-api.de", "overpass.private.coffee"]);
+    expect(out[0].tags).toEqual(["caribbean", "jamaican"]);
+  });
+});
